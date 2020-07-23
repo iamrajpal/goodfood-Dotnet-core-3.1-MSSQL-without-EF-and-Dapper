@@ -23,11 +23,7 @@ namespace Infrastructure.Security
             _connection = connection;
             conStr = _connection.GetConnectionString();
         }
-        public Task<GoodFoodUserDto> Login(string username, string password)
-        {
-            throw new System.NotImplementedException();
-        }
-
+       
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512())
@@ -71,7 +67,7 @@ namespace Infrastructure.Security
             {
                 var user = new GoodFoodUserDto
                 {
-                    UserName = username
+                    Username = username
                 };
                 return user;
             }
@@ -91,7 +87,7 @@ namespace Infrastructure.Security
                 {
                     var user = new GoodFoodUserDto
                     {
-                        UserName = reader["user_name"].ToString()
+                        Username = reader["user_name"].ToString()
                     };
 
                     allusers.Add(user);
@@ -112,11 +108,11 @@ namespace Infrastructure.Security
             {
                 while (reader.Read())
                 {
-                    user.UserName = reader["user_name"].ToString();
+                    user.Username = reader["user_name"].ToString();
                     var pass = ObjectToByteArray(reader["user_password_hash"]);
-                    user.User_Password_Hash = pass;
+                    user.PasswordHash = pass;
                     var salt = ObjectToByteArray(reader["user_password_salt"]);
-                    user.User_Password_Salt = salt;
+                    user.PasswordSalt = salt;
                 }
                 await reader.CloseAsync();
             }

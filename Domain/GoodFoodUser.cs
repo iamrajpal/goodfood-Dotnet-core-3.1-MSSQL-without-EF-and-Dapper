@@ -2,8 +2,8 @@
 {
     public class GoodFoodUser
     {
-        public string UserName { get; set; }
-        public byte[] User_Password_Hash { get; set; }
-        public byte[] User_Password_Salt { get; set; }
+        public string Username { get; set; }
+        public byte[] PasswordHash { get; set; }
+        public byte[] PasswordSalt { get; set; }
     }
 }

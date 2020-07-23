@@ -38,7 +38,7 @@ namespace Application.GoodFoodUsers
 
                 var returnUser = new GoodFoodUserDto
                 {
-                    UserName = user.UserName + " successfully login"
+                    Username = user.Username + " successfully login"
                 };
 
                 return returnUser;
