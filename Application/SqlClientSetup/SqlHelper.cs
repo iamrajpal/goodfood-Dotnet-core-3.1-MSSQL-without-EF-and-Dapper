@@ -3,9 +3,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 
-namespace Infrastructure.SqlClientSetup
-{
-    
+namespace Application.SqlClientSetup
+{   
     static class SqlHelper
     {
         // Set the connection, command, and then execute the command with non query.  

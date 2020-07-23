@@ -15,6 +15,7 @@ using Infrastructure.Security;
 using MediatR;
 using Application.GoodFoodUsers;
 using API.Middleware;
+using Application.Services;
 
 namespace API
 {
@@ -35,6 +36,7 @@ namespace API
 
             services.AddScoped<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
+            services.AddScoped<IRecipeGenerator, RecipeGenerator>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

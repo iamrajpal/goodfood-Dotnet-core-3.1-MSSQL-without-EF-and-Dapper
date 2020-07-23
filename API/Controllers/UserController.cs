@@ -13,13 +13,11 @@ namespace API.Controllers
         {
             return await Mediator.Send(new GetUser.GetUserQuery());
         }
-        [HttpPost]
         [HttpPost("register")]
         public async Task<ActionResult<GoodFoodUserDto>> Register(RegisterUser.RegisterUserCommand command)
         {
             return await Mediator.Send(command);
         }
-        [HttpPost]
         [HttpPost("login")]
         public async Task<ActionResult<GoodFoodUserDto>> Login(LoginUser.LoginUserCommand command)
         {

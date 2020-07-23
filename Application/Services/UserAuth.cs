@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Errors;
 using Application.Interfaces;
-using Domain;
-using Infrastructure.SqlClientSetup;
+using Domain.Entities;
+using Application.SqlClientSetup;
 
 namespace Infrastructure.Security
 {
@@ -33,9 +33,9 @@ namespace Infrastructure.Security
             }
         }
 
-        public async Task<bool> UserExits(string username)
+        public async Task<bool> IsUserExits(string username)
         {
-            String commandText = "Select Count([user_name]) FROM [dbo].[goodfooduser] Where user_name=@username";
+            string commandText = "Select Count([user_name]) FROM [dbo].[goodfooduser] Where user_name=@username";
             SqlParameter parameterUsername = new SqlParameter("@username", SqlDbType.VarChar);
             parameterUsername.Value = username;
 
@@ -49,7 +49,7 @@ namespace Infrastructure.Security
 
         public async Task<GoodFoodUserDto> Register(string username, string password)
         {
-            if (await UserExits(username))
+            if (await IsUserExits(username))
                 throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
 
             byte[] passwordHash, passwordSalt;
@@ -79,7 +79,7 @@ namespace Infrastructure.Security
         {
             List<GoodFoodUserDto> allusers = new List<GoodFoodUserDto>();
 
-            string selectCommandText = "dbo.getAllExistUsers";
+            string selectCommandText = "dbo.getAllUsernames";
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
                 CommandType.StoredProcedure))
             {
@@ -100,7 +100,8 @@ namespace Infrastructure.Security
         public async Task<GoodFoodUser> GetUser(string username)
         {
             var user = new GoodFoodUser();
-            string selectCommandText = "dbo.getExistUserWithHash";
+            bool isUserExist = false;
+            string selectCommandText = "dbo.getUser";
             SqlParameter parameterUsername = new SqlParameter("@username", SqlDbType.VarChar);
             parameterUsername.Value = username;
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
@@ -108,16 +109,17 @@ namespace Infrastructure.Security
             {
                 while (reader.Read())
                 {
+                    isUserExist = true;
                     user.Username = reader["user_name"].ToString();
                     var pass = ObjectToByteArray(reader["user_password_hash"]);
                     user.PasswordHash = pass;
                     var salt = ObjectToByteArray(reader["user_password_salt"]);
                     user.PasswordSalt = salt;
-                }
+                    user.Id = (int)reader["user_id"];
+                } 
                 await reader.CloseAsync();
             }
-
-            return user;
+            return isUserExist ? user : null;
         }
 
         private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
@@ -144,6 +146,6 @@ namespace Infrastructure.Security
                 return ms.ToArray();
             }
         }
-
+        
     }
 }
