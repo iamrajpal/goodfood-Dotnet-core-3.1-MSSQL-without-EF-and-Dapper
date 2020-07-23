@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Persistence
+﻿namespace Persistence
 {
     public class Class1
     {
