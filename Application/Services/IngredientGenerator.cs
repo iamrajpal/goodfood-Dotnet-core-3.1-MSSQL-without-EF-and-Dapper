@@ -2,11 +2,9 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using Application.Dtos;
 using Application.Interfaces;
 using Application.SqlClientSetup;
 using Domain.Entities;
-using MediatR;
 
 namespace Application.Services
 {
