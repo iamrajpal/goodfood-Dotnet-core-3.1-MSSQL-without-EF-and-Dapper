@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Recipies;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -9,6 +10,13 @@ namespace API.Controllers
     {
         [HttpPost("{username}/create")]
         public async Task<ActionResult<RecipeDto>> Create(string username, CreateRecipe.CreateRecipeCommand command)
+        {
+            command.Username = username;
+            return await Mediator.Send(command);
+        }
+
+        [HttpPut("{username}/edit")]
+        public async Task<ActionResult<Unit>> Edit(string username, UpdateRecipe.UpdateRecipeCommand command)
         {
             command.Username = username;
             return await Mediator.Send(command);
