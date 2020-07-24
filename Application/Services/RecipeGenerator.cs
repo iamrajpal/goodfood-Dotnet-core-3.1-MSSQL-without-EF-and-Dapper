@@ -23,13 +23,25 @@ namespace Application.Services
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> IsRecipeExits(string recipename)
+        public async Task<bool> IsRecipeExits(string recipename, int userId, string recipeSlug)
         {
-            string commandText = "Select Count([recipe_title]) FROM [dbo].[recipes] Where recipe_title=@recipename";
+            string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
+                WHERE (recipe_title=@recipename AND user_Id=@userId) OR (recipe_slug=@recipeSlug AND user_Id=@userId)";
             SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
             parameterRecipename.Value = recipename;
+            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
+            parameterUserId.Value = userId;            
+            SqlParameter parameterRecipeSlug = new SqlParameter("@recipeSlug", SqlDbType.NVarChar);
+            parameterRecipeSlug.Value = recipeSlug;
 
-            Object oValue = await SqlHelper.ExecuteScalarAsync(conStr, commandText, CommandType.Text, parameterRecipename);
+            Object oValue = await SqlHelper.ExecuteScalarAsync(
+                conStr,
+                commandText,
+                CommandType.Text,
+                parameterRecipename,
+                parameterUserId,
+                parameterRecipeSlug);
+                
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
                 return count > 0 ? true : false;
