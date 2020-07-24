@@ -34,9 +34,9 @@ namespace Application.Services
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text,
                 ingredient_name, ingredient_description, ingredient_slug, user_id);
 
-            if (rows >= 1) return true;
+            return rows >= 1 ? true : false;
 
-            return false;
+            throw new Exception("Problem saving changes");
         }
 
         public async Task<IngredientDto> GetIngredient(int userId, int ingredientId)
@@ -118,11 +118,11 @@ namespace Application.Services
             if (Int32.TryParse(oValue.ToString(), out count))
                 return count > 0 ? true : false;
 
-            return false;
+            throw new Exception("Problem saving changes");
         }
         public async Task<bool> IsIngredientExitById(int ingredientId, int userId)
         {
-            string commandText = @"SELECT Count([ingredient_name]) FROM [dbo].[ingredients] 
+            string commandText = @"SELECT Count([ingredient_id]) FROM [dbo].[ingredients] 
                 WHERE ingredient_id=@ingredientId AND user_Id=@userId";
 
             SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
@@ -141,7 +141,7 @@ namespace Application.Services
             if (Int32.TryParse(oValue.ToString(), out count))
                 return count > 0 ? true : false;
 
-            return false;
+            throw new Exception("Problem saving changes");
         }
 
         public async Task<bool> Update(int userId, int ingredientId, IngredientDto ingredient)
@@ -157,9 +157,42 @@ namespace Application.Services
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
                 ingredient_name, ingredient_description, ingredient_id, user_id);
 
-            if (rows >= 1) return true;
+            return rows >= 1 ? true : false;
+            throw new Exception("Problem saving changes");
+        }
 
-            return false;
+        public async Task<bool> IsIngredientExitInRecipeIngredient(int ingredientId)
+        {
+            string commandText = @"SELECT Count([ingredient_id]) FROM [dbo].[recipe_ingredients] 
+                WHERE ingredient_id=@ingredientId";
+
+            SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
+            parameterIngredientId.Value = ingredientId;
+            Object oValue = await SqlHelper.ExecuteScalarAsync(
+                conStr,
+                commandText,
+                CommandType.Text,
+                parameterIngredientId);
+
+            Int32 count;
+            if (Int32.TryParse(oValue.ToString(), out count))
+                return count > 0 ? true : false;
+
+            throw new Exception("Problem saving changes");
+        }
+
+        public async Task<bool> Delete(int userId, int ingredientId)
+        {
+            string DELETECommandText = @"DELETE FROM [dbo].[ingredients] 
+                WHERE user_id = @userId AND ingredient_id = @ingredientId";
+
+            SqlParameter ingredient_id = new SqlParameter("@ingredientId", ingredientId);
+            SqlParameter user_id = new SqlParameter("@userId", userId);
+
+            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, DELETECommandText, CommandType.Text, ingredient_id, user_id);
+
+            return rows >= 1 ? true : false;
+            throw new Exception("Problem saving changes");
         }
     }
 }

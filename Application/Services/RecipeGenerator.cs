@@ -2,13 +2,9 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using Application.Dtos;
 using Application.Interfaces;
 using Domain.Entities;
 using Application.SqlClientSetup;
-using Application.Errors;
-using System.Net;
-using MediatR;
 using Domain.Enums;
 using System.Collections.Generic;
 

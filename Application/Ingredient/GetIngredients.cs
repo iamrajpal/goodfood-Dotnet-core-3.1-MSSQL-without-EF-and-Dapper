@@ -7,7 +7,7 @@ using Application.Errors;
 using Application.Interfaces;
 using MediatR;
 
-namespace Application.Ingredeients
+namespace Application.Ingredient
 {
     public class GetIngredients
     {

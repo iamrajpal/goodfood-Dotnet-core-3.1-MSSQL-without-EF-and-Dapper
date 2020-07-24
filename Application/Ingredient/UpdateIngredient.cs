@@ -2,23 +2,23 @@ using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.Dtos;
 using Application.Errors;
 using Application.Interfaces;
-using Domain.Entities;
 using MediatR;
 
-namespace Application.Ingredeients
+namespace Application.Ingredient
 {
-    public class CreateIngredient
+    public class UpdateIngredient
     {
-        public class CreateIngredientCommand : IRequest
+        public class UpdateIngredientCommand : IRequest
         {
+            public int IngredientId { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
-            public string SlugUrl { get; set; }
             public string Username { get; set; }
         }
-        public class Handler : IRequestHandler<CreateIngredientCommand>
+        public class Handler : IRequestHandler<UpdateIngredientCommand>
         {
             private readonly IUserAuth _userAuth;
             private readonly IIngredientGenerator _ingredientGenerator;
@@ -28,29 +28,29 @@ namespace Application.Ingredeients
                 _userAuth = userAuth;
             }
 
-            public async Task<Unit> Handle(CreateIngredientCommand request,
+            public async Task<Unit> Handle(UpdateIngredientCommand request,
                 CancellationToken cancellationToken)
             {
                 var user = await _userAuth.GetUser(request.Username);
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                if (await _ingredientGenerator.IsIngredientExitByName(request.Name, user.Id, request.SlugUrl))
-                    throw new RestException(HttpStatusCode.BadRequest, new { Ingredient_slug = "Already exist" });
+                var ingredent = await _ingredientGenerator.GetIngredient(user.Id, request.IngredientId);
+                if (ingredent == null)
+                    throw new RestException(HttpStatusCode.NotFound, new { Ingredent = "Not found" });
 
-                var createIngredient = new Ingredients
+                var updateIngredent = new IngredientDto
                 {
-                    Name = request.Name,
-                    Description = request.Description,
-                    SlugUrl = request.SlugUrl
+                    Name = request.Name ?? ingredent.Name,
+                    Description = request.Description ?? ingredent.Description
                 };
 
-                var success = await _ingredientGenerator.Create(user.Id, createIngredient);
-
+                var success = await _ingredientGenerator.Update(user.Id, request.IngredientId, updateIngredent);
                 if (success) return Unit.Value;
 
                 throw new Exception("Problem saving changes");
             }
         }
+
     }
 }
