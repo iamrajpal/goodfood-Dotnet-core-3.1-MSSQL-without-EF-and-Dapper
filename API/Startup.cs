@@ -37,6 +37,7 @@ namespace API
             services.AddScoped<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
             services.AddScoped<IRecipeGenerator, RecipeGenerator>();
+            services.AddScoped<IIngredientGenerator, IngredientGenerator>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

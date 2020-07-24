@@ -53,6 +53,7 @@ namespace Application.Services
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
                 WHERE (recipe_title=@recipename AND user_Id=@userId) OR (recipe_slug=@recipeSlug AND user_Id=@userId)";
+                
             SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
             parameterRecipename.Value = recipename;
             SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
