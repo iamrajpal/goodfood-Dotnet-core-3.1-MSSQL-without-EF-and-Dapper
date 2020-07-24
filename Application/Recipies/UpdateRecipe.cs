@@ -41,7 +41,7 @@ namespace Application.Recipies
                 if (recipe == null)
                     throw new RestException(HttpStatusCode.NotFound, new { Recipe = "Not found" });
 
-                if (await _recipeGenerator.IsRecipeExits(request.Title, user.Id, recipe.SlugUrl))
+                if (await _recipeGenerator.IsRecipeExits(request.Title, user.Id))
                     throw new RestException(HttpStatusCode.BadRequest, new { Recipe_Title = "Already exist" });
 
                 var updateRecipe = new Recipe

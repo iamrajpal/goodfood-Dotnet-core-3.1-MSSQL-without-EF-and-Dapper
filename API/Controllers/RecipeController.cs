@@ -21,6 +21,12 @@ namespace API.Controllers
             command.Username = username;
             return await Mediator.Send(command);
         }
+        [HttpDelete("{username}/delete")]
+        public async Task<ActionResult<Unit>> Delete(string username, DeleteRecipe.DeleteRecipeCommand command)
+        {
+            command.Username = username;
+            return await Mediator.Send(command);
+        }
 
     }
 }

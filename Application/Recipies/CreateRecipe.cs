@@ -37,7 +37,7 @@ namespace Application.Recipies
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                if (await _recipeGenerator.IsRecipeExits(request.Title, user.Id, request.SlugUrl))
+                if (await _recipeGenerator.IsRecipeExitsWithSlug(request.Title, user.Id, request.SlugUrl))
                     throw new RestException(HttpStatusCode.BadRequest, new { Recipe_Slug = "Already exist" });
 
                 var toCreateRecipe = new Recipe

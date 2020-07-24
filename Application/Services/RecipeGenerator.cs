@@ -10,6 +10,7 @@ using Application.Errors;
 using System.Net;
 using MediatR;
 using Domain.Enums;
+using System.Collections.Generic;
 
 namespace Application.Services
 {
@@ -25,7 +26,30 @@ namespace Application.Services
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> IsRecipeExits(string recipename, int userId, string recipeSlug)
+        public async Task<bool> IsRecipeExits(string recipename, int userId)
+        {
+            string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
+                WHERE recipe_title=@recipename AND user_Id=@userId";
+            SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
+            parameterRecipename.Value = recipename;
+            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
+            parameterUserId.Value = userId;
+
+            Object oValue = await SqlHelper.ExecuteScalarAsync(
+                conStr,
+                commandText,
+                CommandType.Text,
+                parameterRecipename,
+                parameterUserId);
+
+            Int32 count;
+            if (Int32.TryParse(oValue.ToString(), out count))
+                return count > 0 ? true : false;
+
+            return false;
+        }
+
+        public async Task<bool> IsRecipeExitsWithSlug(string recipename, int userId, string recipeSlug)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
                 WHERE (recipe_title=@recipename AND user_Id=@userId) OR (recipe_slug=@recipeSlug AND user_Id=@userId)";
@@ -87,7 +111,7 @@ namespace Application.Services
             SqlParameter recipe_title = new SqlParameter("@recipeTitle", recipe.Title);
             SqlParameter recipe_description = new SqlParameter("@recipeDescription", recipe.Description);
             SqlParameter recipe_category = new SqlParameter("@recipeCategory", recipe.Category);
-            SqlParameter recipe_id = new SqlParameter("@recipeId", recipeId);            
+            SqlParameter recipe_id = new SqlParameter("@recipeId", recipeId);
             SqlParameter user_id = new SqlParameter("@userId", userId);
 
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
@@ -121,6 +145,26 @@ namespace Application.Services
                 await reader.CloseAsync();
             }
             return isRecipeExist ? recipe : null;
+        }
+
+        public async Task<bool> Delete(int userId, List<int> recipeIds)
+        {
+            bool checkDeleteStatus = false;
+
+            foreach (var recipeId in recipeIds)
+            {
+                checkDeleteStatus = false;
+                string DELETECommandText = @"DELETE FROM [dbo].[recipes] WHERE user_id = @userId AND recipe_id = @recipeId";
+
+                SqlParameter recipe_id = new SqlParameter("@recipeId", recipeId);
+                SqlParameter user_id = new SqlParameter("@userId", userId);
+
+                Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, DELETECommandText, CommandType.Text, recipe_id, user_id);
+
+                if (rows >= 1) checkDeleteStatus = true;
+            }
+
+            return checkDeleteStatus;
         }
     }
 }
