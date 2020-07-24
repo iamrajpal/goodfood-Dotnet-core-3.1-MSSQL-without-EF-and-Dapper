@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using Application.Dtos;
 using Application.Interfaces;
 using Application.SqlClientSetup;
 using Domain.Entities;
@@ -35,6 +37,33 @@ namespace Application.Services
             if (rows >= 1) return true;
 
             return false;
+        }
+
+        public async Task<List<IngredientDto>> GetIngredients(int userId)
+        {
+            List<IngredientDto> ingredients = new List<IngredientDto>();
+
+            string selectCommandText = "dbo.getIngredientsByUserId";
+             SqlParameter parameterUsername = new SqlParameter("@userId", SqlDbType.VarChar);
+            parameterUsername.Value = userId;
+            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                CommandType.StoredProcedure, parameterUsername))
+            {
+                while (reader.Read())
+                {
+                    var ingredient = new IngredientDto
+                    {
+                        Id = (int)reader["ingredient_id"],
+                        Name = (string)reader["ingredient_name"],
+                        Description = (string)reader["ingredient_description"],
+                        SlugUrl = (string)reader["ingredient_slug"],
+                    };
+
+                    ingredients.Add(ingredient);
+                }
+                await reader.CloseAsync();
+            }
+            return ingredients;
         }
 
         public async Task<bool> IsIngredientExits(string IngredientName, int userId)
