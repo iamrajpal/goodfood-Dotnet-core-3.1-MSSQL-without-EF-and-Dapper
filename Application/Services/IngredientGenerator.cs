@@ -39,15 +39,44 @@ namespace Application.Services
             return false;
         }
 
+        public async Task<IngredientDto> GetIngredient(int userId, int ingredientId)
+        {
+            
+            var ingredient = new IngredientDto();
+            string selectCommandText = "dbo.getIngredientByUserId";
+            SqlParameter parameterUsername = new SqlParameter("@userId", SqlDbType.Int);
+            parameterUsername.Value = userId;
+            SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
+            parameterIngredientId.Value = ingredientId;
+            
+            bool isIngredientExist = false;
+            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                CommandType.StoredProcedure, parameterUsername, parameterIngredientId))
+            {
+                
+                while (reader.Read())
+                {
+                    isIngredientExist = true;
+                    ingredient.Id = (int)reader["ingredient_id"];
+                    ingredient.Name = (string)reader["ingredient_name"];
+                    ingredient.Description = (string)reader["ingredient_description"];
+                    ingredient.SlugUrl = (string)reader["ingredient_slug"];                    
+                }
+                await reader.CloseAsync();
+            }
+            return isIngredientExist ? ingredient : null;
+        }
+
         public async Task<List<IngredientDto>> GetIngredients(int userId)
         {
             List<IngredientDto> ingredients = new List<IngredientDto>();
 
             string selectCommandText = "dbo.getIngredientsByUserId";
-             SqlParameter parameterUsername = new SqlParameter("@userId", SqlDbType.VarChar);
-            parameterUsername.Value = userId;
+            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
+            parameterUserId.Value = userId;
+
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, parameterUsername))
+                CommandType.StoredProcedure, parameterUserId))
             {
                 while (reader.Read())
                 {
@@ -86,6 +115,24 @@ namespace Application.Services
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
                 return count > 0 ? true : false;
+
+            return false;
+        }
+
+        public async Task<bool> Update(int userId, int ingredientId, IngredientDto ingredient)
+        {
+            string updateCommandText = @"UPDATE [dbo].[ingredients] SET ingredient_name = @name, 
+                ingredient_description = @description WHERE ingredient_id = @ingredientId AND user_Id = @userId";
+
+            SqlParameter ingredient_name = new SqlParameter("@name", ingredient.Name);
+            SqlParameter ingredient_description = new SqlParameter("@description", ingredient.Description);
+            SqlParameter ingredient_id = new SqlParameter("@ingredientId", ingredientId);
+            SqlParameter user_id = new SqlParameter("@userId", userId);
+
+            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
+                ingredient_name, ingredient_description, ingredient_id, user_id);
+
+            if (rows >= 1) return true;
 
             return false;
         }

@@ -20,5 +20,11 @@ namespace API.Controllers
         {
             return await Mediator.Send(new GetIngredients.GetIngredientsQuery{Username = username});
         }
+        [HttpPut("{username}/edit")]
+        public async Task<ActionResult<Unit>> Edit(string username, UpdateIngredient.UpdateIngredientCommand command)
+        {
+            command.Username = username;
+            return await Mediator.Send(command);
+        }
     }
 }

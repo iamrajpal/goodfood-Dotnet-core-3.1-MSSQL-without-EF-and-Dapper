@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Application.Dtos;
 using Domain.Entities;
-using MediatR;
 
 namespace Application.Interfaces
 {
@@ -14,6 +13,5 @@ namespace Application.Interfaces
         Task<bool> Update(int userId, int recipeId, Recipe recipe);
         Task<Recipe> GetRecipe(int recipeId, int userId);
         Task<bool> Delete(int userId, List<int> recipeIds);
-
     }
 }

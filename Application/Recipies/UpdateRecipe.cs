@@ -48,7 +48,6 @@ namespace Application.Recipies
                 {
                     Title = request.Title ?? recipe.Title,
                     Description = request.Description ?? recipe.Description,
-                    SlugUrl = recipe.SlugUrl,
                     Category = request.Category,
                 };
 
