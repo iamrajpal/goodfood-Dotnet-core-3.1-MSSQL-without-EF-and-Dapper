@@ -7,7 +7,7 @@ namespace Application.Interfaces
 {
     public interface IRecipeGenerator
     {
-        Task<RecipeDto> Create(int userId, Recipe recipe);
+        Task<Recipe> Create(int userId, Recipe recipe);
         Task<bool> IsRecipeExitsWithSlug(string recipename, int userId, string recipeSlug);
         Task<bool> IsRecipeExits(string recipename, int userId);
         Task<bool> Update(int userId, int recipeId, Recipe recipe);

@@ -14,7 +14,6 @@ namespace Application.Measurements
         public class CreateMeasurementCommand : IRequest
         {
             public string Amount { get; set; }
-            public string Description { get; set; }
             public string Username { get; set; }
         }
         public class Handler : IRequestHandler<CreateMeasurementCommand>
@@ -33,16 +32,10 @@ namespace Application.Measurements
                 var user = await _userAuth.GetUser(request.Username);
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+                
+                var success = await _measurementGenerator.Create(request.Amount);
 
-                var createMeasurement = new IngredientMeasurements
-                {
-                    Amount = request.Amount,
-                    Description = request.Description
-                };
-
-                var success = await _measurementGenerator.Create(createMeasurement);
-
-                if (success) return Unit.Value;
+                if (success > 0) return Unit.Value;
 
                 throw new Exception("Problem saving changes");
             }

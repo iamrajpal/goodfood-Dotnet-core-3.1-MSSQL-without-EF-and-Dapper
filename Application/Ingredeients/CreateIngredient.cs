@@ -35,8 +35,8 @@ namespace Application.Ingredeients
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                if (await _ingredientGenerator.IsIngredientExits(request.Name, user.Id))
-                    throw new RestException(HttpStatusCode.BadRequest, new { Ingredient = "Already exist" });
+                if (await _ingredientGenerator.IsIngredientExitByName(request.Name, user.Id, request.SlugUrl))
+                    throw new RestException(HttpStatusCode.BadRequest, new { Ingredient_slug = "Already exist" });
 
                 var createIngredient = new Ingredients
                 {

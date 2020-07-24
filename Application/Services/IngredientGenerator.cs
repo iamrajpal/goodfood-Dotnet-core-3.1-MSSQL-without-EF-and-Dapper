@@ -41,26 +41,25 @@ namespace Application.Services
 
         public async Task<IngredientDto> GetIngredient(int userId, int ingredientId)
         {
-            
             var ingredient = new IngredientDto();
-            string selectCommandText = "dbo.getIngredientByUserId";
+            string selectCommandText = "dbo.getIngredientByUserIdAndIngredientId";
             SqlParameter parameterUsername = new SqlParameter("@userId", SqlDbType.Int);
             parameterUsername.Value = userId;
             SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
             parameterIngredientId.Value = ingredientId;
-            
+
             bool isIngredientExist = false;
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
                 CommandType.StoredProcedure, parameterUsername, parameterIngredientId))
             {
-                
+
                 while (reader.Read())
                 {
                     isIngredientExist = true;
                     ingredient.Id = (int)reader["ingredient_id"];
                     ingredient.Name = (string)reader["ingredient_name"];
                     ingredient.Description = (string)reader["ingredient_description"];
-                    ingredient.SlugUrl = (string)reader["ingredient_slug"];                    
+                    ingredient.SlugUrl = (string)reader["ingredient_slug"];
                 }
                 await reader.CloseAsync();
             }
@@ -71,7 +70,7 @@ namespace Application.Services
         {
             List<IngredientDto> ingredients = new List<IngredientDto>();
 
-            string selectCommandText = "dbo.getIngredientsByUserId";
+            string selectCommandText = "dbo.allIngredientByUserId";
             SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
             parameterUserId.Value = userId;
 
@@ -95,13 +94,39 @@ namespace Application.Services
             return ingredients;
         }
 
-        public async Task<bool> IsIngredientExits(string IngredientName, int userId)
+        public async Task<bool> IsIngredientExitByName(string ingredientName, int userId, string slugUrl)
         {
             string commandText = @"SELECT Count([ingredient_name]) FROM [dbo].[ingredients] 
-                WHERE ingredient_name=@ingredientname AND user_Id=@userId";
+                WHERE (ingredient_name=@ingredientname AND user_Id=@userId) OR (ingredient_slug=@slugUrl AND user_Id=@userId)";
 
             SqlParameter parameterIngredientname = new SqlParameter("@ingredientname", SqlDbType.VarChar);
-            parameterIngredientname.Value = IngredientName;
+            parameterIngredientname.Value = ingredientName;
+            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
+            parameterUserId.Value = userId;
+            SqlParameter parameterSlugUrl = new SqlParameter("@slugUrl", SqlDbType.NVarChar);
+            parameterSlugUrl.Value = slugUrl;
+
+            Object oValue = await SqlHelper.ExecuteScalarAsync(
+                conStr,
+                commandText,
+                CommandType.Text,
+                parameterIngredientname,
+                parameterUserId,
+                parameterSlugUrl);
+
+            Int32 count;
+            if (Int32.TryParse(oValue.ToString(), out count))
+                return count > 0 ? true : false;
+
+            return false;
+        }
+        public async Task<bool> IsIngredientExitById(int ingredientId, int userId)
+        {
+            string commandText = @"SELECT Count([ingredient_name]) FROM [dbo].[ingredients] 
+                WHERE ingredient_id=@ingredientId AND user_Id=@userId";
+
+            SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
+            parameterIngredientId.Value = ingredientId;
             SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
             parameterUserId.Value = userId;
 
@@ -109,7 +134,7 @@ namespace Application.Services
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterIngredientname,
+                parameterIngredientId,
                parameterUserId);
 
             Int32 count;

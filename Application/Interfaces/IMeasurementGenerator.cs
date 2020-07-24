@@ -5,6 +5,6 @@ namespace Application.Interfaces
 {
     public interface IMeasurementGenerator
     {
-        Task<bool> Create(IngredientMeasurements measurement);
+        Task<int> Create(string amount);
     }
 }

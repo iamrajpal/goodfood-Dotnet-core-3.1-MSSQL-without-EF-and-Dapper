@@ -32,6 +32,7 @@ namespace API
             services.AddScoped<IRecipeGenerator, RecipeGenerator>();
             services.AddScoped<IIngredientGenerator, IngredientGenerator>();
             services.AddScoped<IMeasurementGenerator, MeasurementGenerator>();
+            services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

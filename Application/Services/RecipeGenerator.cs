@@ -76,9 +76,10 @@ namespace Application.Services
             return false;
         }
 
-        public async Task<RecipeDto> Create(int userId, Recipe recipe)
+        public async Task<Recipe> Create(int userId, Recipe recipe)
         {
             string insertCommandText = @"INSERT INTO [dbo].[recipes] (recipe_title, recipe_description, recipe_slug, recipe_category, user_id)
+                OUTPUT INSERTED.recipe_id
                 values (@recipeTitle, @recipeDescription, @recipeSlug, @recipeCategory, @userId)";
 
             SqlParameter recipe_title = new SqlParameter("@recipeTitle", recipe.Title);
@@ -87,16 +88,17 @@ namespace Application.Services
             SqlParameter recipe_category = new SqlParameter("@recipeCategory", recipe.Category);
             SqlParameter user_id = new SqlParameter("@userId", userId);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text,
+            var identityId = await SqlHelper.ExecuteScalarAsync(conStr, insertCommandText, CommandType.Text,
                 recipe_title, recipe_description, recipe_slug, recipe_category, user_id);
-            if (rows >= 1)
+            if (identityId != null)
             {
-                var recipeToReturn = new RecipeDto
+                var recipeToReturn = new Recipe
                 {
+                    Id = (int)identityId,
                     Title = recipe.Title,
                     Description = recipe.Description,
-                    Url = recipe.SlugUrl,
-                    Category = recipe.Category.ToString()
+                    SlugUrl = recipe.SlugUrl,
+                    Category = recipe.Category
                 };
                 return recipeToReturn;
             }

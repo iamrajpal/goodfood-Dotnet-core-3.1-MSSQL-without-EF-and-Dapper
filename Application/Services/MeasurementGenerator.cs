@@ -19,20 +19,18 @@ namespace Application.Services
             _userAuth = userAuth;
             conStr = _connection.GetConnectionString();
         }
-        public async Task<bool> Create(IngredientMeasurements measurement)
+        public async Task<int> Create(string amount)
         {
-            string insertCommandText = @"INSERT INTO [dbo].[measurements] (measurement_amount, measurement_description)
-                values (@amount, @description)";
+            string insertCommandText = @"INSERT INTO [dbo].[measurements] (measurement_amount)
+                OUTPUT INSERTED.measurement_id
+                values (@amount)";
 
-            SqlParameter measurement_amount = new SqlParameter("@amount", measurement.Amount);
-            SqlParameter measurement_description = new SqlParameter("@description", measurement.Description);
+            SqlParameter measurement_amount = new SqlParameter("@amount", amount);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text,
-                measurement_amount, measurement_description);
+            var identityId = await SqlHelper.ExecuteScalarAsync(conStr, insertCommandText, CommandType.Text,
+                measurement_amount);
 
-            if (rows >= 1) return true;
-
-            return false;
+            return (int)(identityId != null ? identityId : null);
         }
        
     }
