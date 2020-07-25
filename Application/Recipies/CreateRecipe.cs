@@ -19,7 +19,7 @@ namespace Application.Recipies
             public int IngredientId { get; set; }
             public string Amount { get; set; }
         }
-        public class CreateRecipeCommand : IRequest<Recipe>
+        public class CreateRecipeCommand : IRequest
         {
             public string Title { get; set; }
             public string Description { get; set; }
@@ -28,7 +28,7 @@ namespace Application.Recipies
             public string Username { get; set; }
             public List<Ingredients> Ingredients { get; set; }
         }
-        public class Handler : IRequestHandler<CreateRecipeCommand, Recipe>
+        public class Handler : IRequestHandler<CreateRecipeCommand>
         {
             private readonly IUserAuth _userAuth;
             private readonly IRecipeGenerator _recipeGenerator;
@@ -50,16 +50,26 @@ namespace Application.Recipies
                 _userAuth = userAuth;
             }
 
-            public async Task<Recipe> Handle(CreateRecipeCommand request,
+            public async Task<Unit> Handle(CreateRecipeCommand request,
                 CancellationToken cancellationToken)
             {
                 var user = await _userAuth.GetUser(request.Username);
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
-              
+
                 if (await _recipeGenerator.IsRecipeExitsWithSlug(request.Title, user.Id, request.SlugUrl))
                     throw new RestException(HttpStatusCode.BadRequest, new { Recipe_Slug = "Already exist" });
-
+                
+                bool haveIngredients = false;
+                if (request.Ingredients != null && request.Ingredients.Count > 0)
+                {
+                    haveIngredients = true;
+                    foreach (var ingredient in request.Ingredients)
+                    {
+                        if (!await _ingredientGenerator.IsIngredientExitById(ingredient.IngredientId, user.Id))
+                            throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
+                    }
+                }
 
                 var toCreateRecipe = new Recipe
                 {
@@ -71,12 +81,10 @@ namespace Application.Recipies
 
                 var createdRecipe = await _recipeGenerator.Create(user.Id, toCreateRecipe);
 
-                if (request.Ingredients != null && request.Ingredients.Count > 0)
+                if (haveIngredients)
                 {
                     foreach (var ingredient in request.Ingredients)
                     {
-                        if (!await _ingredientGenerator.IsIngredientExitById(ingredient.IngredientId, user.Id))
-                            throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
                         int? measurementId = null;
                         if (!string.IsNullOrEmpty(ingredient.Amount))
                         {
@@ -88,7 +96,9 @@ namespace Application.Recipies
                     }
                 }
 
-                return createdRecipe;
+                return Unit.Value;
+
+                throw new Exception("Problem creating recipe");
             }
         }
     }

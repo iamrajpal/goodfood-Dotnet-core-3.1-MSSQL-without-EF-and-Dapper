@@ -47,7 +47,7 @@ namespace Application.Ingredient
 
                 var success = await _ingredientGenerator.Create(user.Id, createIngredient);
 
-                if (success) return Unit.Value;
+                if (success > 0) return Unit.Value;
 
                 throw new Exception("Problem saving changes");
             }

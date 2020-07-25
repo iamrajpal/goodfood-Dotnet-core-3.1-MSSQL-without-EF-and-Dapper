@@ -48,7 +48,7 @@ namespace Application.Services
         public async Task<bool> IsRecipeExitsWithSlug(string recipename, int userId, string recipeSlug)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
-                WHERE (recipe_title=@recipename AND user_Id=@userId) OR (recipe_slug=@recipeSlug AND user_Id=@userId)";
+                WHERE recipe_slug=@recipeSlug AND user_Id=@userId";
                 
             SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
             parameterRecipename.Value = recipename;
@@ -105,7 +105,8 @@ namespace Application.Services
         public async Task<bool> Update(int userId, int recipeId, Recipe recipe)
         {
             string updateCommandText = @"UPDATE [dbo].[recipes] SET recipe_title = @recipeTitle, 
-                recipe_description = @recipeDescription, recipe_category = @recipeCategory WHERE recipe_id = @recipeId AND user_Id = @userId";
+                recipe_description = @recipeDescription, recipe_category = @recipeCategory 
+                WHERE recipe_id = @recipeId AND user_Id = @userId";
 
             SqlParameter recipe_title = new SqlParameter("@recipeTitle", recipe.Title);
             SqlParameter recipe_description = new SqlParameter("@recipeDescription", recipe.Description);
@@ -130,6 +131,7 @@ namespace Application.Services
             parameterUserId.Value = userId;
             SqlParameter parameterRecipeId = new SqlParameter("@recipeId", SqlDbType.Int);
             parameterRecipeId.Value = recipeId;
+            
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
                 CommandType.StoredProcedure, parameterUserId, parameterRecipeId))
             {

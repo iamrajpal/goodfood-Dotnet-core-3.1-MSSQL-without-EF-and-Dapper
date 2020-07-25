@@ -21,9 +21,10 @@ namespace Application.Services
             _userAuth = userAuth;
             conStr = _connection.GetConnectionString();
         }
-        public async Task<bool> Create(int userId, Ingredients ingredient)
+        public async Task<int> Create(int userId, Ingredients ingredient)
         {
             string insertCommandText = @"INSERT INTO [dbo].[ingredients] (ingredient_name, ingredient_description, ingredient_slug, user_id)
+                OUTPUT INSERTED.ingredient_id
                 values (@name, @description, @slug, @userId)";
 
             SqlParameter ingredient_name = new SqlParameter("@name", ingredient.Name);
@@ -31,10 +32,10 @@ namespace Application.Services
             SqlParameter ingredient_slug = new SqlParameter("@slug", ingredient.SlugUrl);
             SqlParameter user_id = new SqlParameter("@userId", userId);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text,
+            var identityId = await SqlHelper.ExecuteScalarAsync(conStr, insertCommandText, CommandType.Text,
                 ingredient_name, ingredient_description, ingredient_slug, user_id);
 
-            return rows >= 1 ? true : false;
+            return (int)(identityId != null ? identityId : null);
 
             throw new Exception("Problem saving changes");
         }
@@ -144,7 +145,7 @@ namespace Application.Services
             throw new Exception("Problem saving changes");
         }
 
-        public async Task<bool> Update(int userId, int ingredientId, IngredientDto ingredient)
+        public async Task<int> Update(int userId, int ingredientId, IngredientDto ingredient)
         {
             string updateCommandText = @"UPDATE [dbo].[ingredients] SET ingredient_name = @name, 
                 ingredient_description = @description WHERE ingredient_id = @ingredientId AND user_Id = @userId";
@@ -157,7 +158,7 @@ namespace Application.Services
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
                 ingredient_name, ingredient_description, ingredient_id, user_id);
 
-            return rows >= 1 ? true : false;
+            return rows >= 1 ? rows : 0;
             throw new Exception("Problem saving changes");
         }
 

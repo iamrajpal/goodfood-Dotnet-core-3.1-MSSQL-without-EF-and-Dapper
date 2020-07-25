@@ -35,18 +35,18 @@ namespace Application.Ingredient
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                var ingredent = await _ingredientGenerator.GetIngredient(user.Id, request.IngredientId);
-                if (ingredent == null)
+                var ingredient = await _ingredientGenerator.GetIngredient(user.Id, request.IngredientId);
+                if (ingredient == null)
                     throw new RestException(HttpStatusCode.NotFound, new { Ingredent = "Not found" });
 
                 var updateIngredent = new IngredientDto
                 {
-                    Name = request.Name ?? ingredent.Name,
-                    Description = request.Description ?? ingredent.Description
+                    Name = request.Name ?? ingredient.Name,
+                    Description = request.Description ?? ingredient.Description
                 };
 
                 var success = await _ingredientGenerator.Update(user.Id, request.IngredientId, updateIngredent);
-                if (success) return Unit.Value;
+                if (success > 0) return Unit.Value;
 
                 throw new Exception("Problem saving changes");
             }

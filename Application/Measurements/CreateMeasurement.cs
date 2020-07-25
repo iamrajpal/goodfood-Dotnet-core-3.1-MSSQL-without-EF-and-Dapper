@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Application.Errors;
 using Application.Interfaces;
-using Domain.Entities;
 using MediatR;
 
 namespace Application.Measurements
