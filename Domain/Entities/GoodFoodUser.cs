@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public string Username { get; set; }
-        public string Password { get; set; }
-        public string PasswordKey { get; set; }
+        public byte[] Password { get; set; }
+        public byte[] PasswordSalt { get; set; }
     }
 }

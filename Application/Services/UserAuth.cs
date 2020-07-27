@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Net;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Errors;
@@ -10,7 +12,6 @@ using Application.Interfaces;
 using Domain.Entities;
 using Application.SqlClientSetup;
 using System.Text;
-using Application.AesHelper;
 
 namespace Infrastructure.Security
 {
@@ -18,20 +19,10 @@ namespace Infrastructure.Security
     {
         private readonly IConnectionString _connection;
         public string conStr = string.Empty;
-        private readonly Random _random = new Random();
         public UserAuth(IConnectionString connection)
         {
             _connection = connection;
             conStr = _connection.GetConnectionString();
-        }
-
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new System.Security.Cryptography.HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            }
         }
 
         public async Task<bool> IsUserExits(string username)
@@ -53,17 +44,23 @@ namespace Infrastructure.Security
             if (await IsUserExits(username))
                 throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
 
-            var key = GenerateKey(32, true);
-            var encryptedString = AesHelper.EncryptString(key, password);
+            byte[] passwordHash, passwordSalt;
+            CreatePasswordHash(password, out passwordHash, out passwordSalt);
 
-            string insertCommandText = @"INSERT INTO [dbo].[goodfooduser] (user_name, user_password, user_password_key)
-                values (@user_Name,@user_password,@user_password_key)";
+            string insertCommandText = @"INSERT INTO [dbo].[goodfooduser] (user_name, user_password, user_password_salt)
+                values (@user_Name,@passwordHash,@passwordSalt)";
 
             SqlParameter user_name = new SqlParameter("@user_Name", username);
-            SqlParameter user_password = new SqlParameter("@user_password", encryptedString);
-            SqlParameter user_password_key = new SqlParameter("@user_password_key", key);
+            SqlParameter user_password = new SqlParameter("@passwordHash", passwordHash);
+            SqlParameter user_password_salt = new SqlParameter("@passwordSalt", passwordSalt);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text, user_name, user_password, user_password_key);
+            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(
+                conStr,
+                insertCommandText,
+                CommandType.Text,
+                user_name,
+                user_password,
+                user_password_salt);
             if (rows >= 1)
             {
                 var user = new GoodFoodUserDto
@@ -103,25 +100,23 @@ namespace Infrastructure.Security
             var user = new GoodFoodUser();
             bool isUserExist = false;
             string selectCommandText = "dbo.getUser";
-            SqlParameter parameterUsername = new SqlParameter("@username", SqlDbType.VarChar);
-            parameterUsername.Value = username;
+            SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
+            user_name.Value = username;
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, parameterUsername))
+                CommandType.StoredProcedure, user_name))
             {
                 while (reader.Read())
                 {
                     isUserExist = true;
                     user.Username = (string)reader["user_name"];
-                    user.Password = (string)reader["user_password"];
-                    user.PasswordKey = (string)reader["user_password_key"];
+                    user.Password = (byte[])reader["user_password"];
+                    user.PasswordSalt = (byte[])reader["user_password_salt"];
                     user.Id = (int)reader["user_id"];
                 }
                 await reader.CloseAsync();
             }
             return isUserExist ? user : null;
         }
-
-
         public async Task<string> VerifyUser(string username, string password)
         {
             string usernameFromDb = string.Empty;
@@ -134,13 +129,10 @@ namespace Infrastructure.Security
             {
                 while (reader.Read())
                 {
+                    var pass = reader["user_password"];
+                    var salt = reader["user_password_salt"];
 
-                    var pass = reader["user_password"].ToString();
-                    var key = reader["user_password_key"].ToString();
-
-                    var decryptedString = AesHelper.DecryptString(key, pass);
-
-                    if (decryptedString != password)
+                    if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
                         throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
                     usernameFromDb = reader["user_name"].ToString();
@@ -149,28 +141,27 @@ namespace Infrastructure.Security
             }
             return usernameFromDb;
         }
-
-
-        private string GenerateKey(int size, bool lowerCase = false)
+        private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
         {
-            var builder = new StringBuilder(size);
-
-            // Unicode/ASCII Letters are divided into two blocks
-            // (Letters 65–90 / 97–122):
-            // The first group containing the uppercase letters and
-            // the second group containing the lowercase.  
-
-            // char is a single Unicode character  
-            char offset = lowerCase ? 'a' : 'A';
-            const int lettersOffset = 26; // A...Z or a..z: length=26  
-
-            for (var i = 0; i < size; i++)
+            using (var hmac = new System.Security.Cryptography.HMACSHA512(user_Password_Salt))
             {
-                var @char = (char)_random.Next(offset, offset + lettersOffset);
-                builder.Append(@char);
+                var computerHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                for (int i = 0; i < computerHash.Length; i++)
+                {
+                    if (computerHash[i] != user_Password_Hash[i]) return false;
+                }
             }
+            return true;
+        }       
 
-            return lowerCase ? builder.ToString().ToLower() : builder.ToString();
+        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        {
+            using (var hmac = new System.Security.Cryptography.HMACSHA512())
+            {
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+            }
         }
+
     }
 }
