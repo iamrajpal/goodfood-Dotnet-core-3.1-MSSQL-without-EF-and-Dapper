@@ -31,7 +31,6 @@ namespace API
             services.AddScoped<IUserAuth, UserAuth>();
             services.AddScoped<IRecipeGenerator, RecipeGenerator>();
             services.AddScoped<IIngredientGenerator, IngredientGenerator>();
-            services.AddScoped<IMeasurementGenerator, MeasurementGenerator>();
             services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
         }
 

@@ -22,21 +22,21 @@ namespace Application.Services
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> IsRecipeExits(string recipename, int userId)
+        public async Task<bool> IsRecipeExits(string recipeTitle, int userId)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
-                WHERE recipe_title=@recipename AND user_Id=@userId";
-            SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
-            parameterRecipename.Value = recipename;
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
+                WHERE recipe_title=@recipeTitle AND user_Id=@userId";
+            SqlParameter recipe_title = new SqlParameter("@recipename", SqlDbType.VarChar);
+            recipe_title.Value = recipeTitle;
+            SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
+            user_Id.Value = userId;
 
             Object oValue = await SqlHelper.ExecuteScalarAsync(
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterRecipename,
-                parameterUserId);
+                recipe_title,
+                user_Id);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
@@ -45,25 +45,22 @@ namespace Application.Services
             return false;
         }
 
-        public async Task<bool> IsRecipeExitsWithSlug(string recipename, int userId, string recipeSlug)
+        public async Task<bool> IsRecipeExitsWithSlug(int userId, string recipeSlug)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
                 WHERE recipe_slug=@recipeSlug AND user_Id=@userId";
-                
-            SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
-            parameterRecipename.Value = recipename;
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
-            SqlParameter parameterRecipeSlug = new SqlParameter("@recipeSlug", SqlDbType.NVarChar);
-            parameterRecipeSlug.Value = recipeSlug;
+
+            SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
+            user_Id.Value = userId;
+            SqlParameter recipe_slug = new SqlParameter("@recipeSlug", SqlDbType.NVarChar);
+            recipe_slug.Value = recipeSlug;
 
             Object oValue = await SqlHelper.ExecuteScalarAsync(
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterRecipename,
-                parameterUserId,
-                parameterRecipeSlug);
+                user_Id,
+                recipe_slug);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
@@ -127,13 +124,13 @@ namespace Application.Services
             var recipe = new Recipe();
             bool isRecipeExist = false;
             string selectCommandText = "dbo.getRecipeByUserId";
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
-            SqlParameter parameterRecipeId = new SqlParameter("@recipeId", SqlDbType.Int);
-            parameterRecipeId.Value = recipeId;
-            
+            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+            user_id.Value = userId;
+            SqlParameter recipe_id = new SqlParameter("@recipeId", SqlDbType.Int);
+            recipe_id.Value = recipeId;
+
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, parameterUserId, parameterRecipeId))
+                CommandType.StoredProcedure, user_id, recipe_id))
             {
                 while (reader.Read())
                 {

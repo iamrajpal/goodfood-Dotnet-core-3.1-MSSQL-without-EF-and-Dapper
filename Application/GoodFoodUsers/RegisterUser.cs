@@ -10,7 +10,7 @@ namespace Application.GoodFoodUsers
     {
         public class RegisterUserCommand : IRequest<GoodFoodUserDto>
         {
-            public string UserName { get; set; }
+            public string Username { get; set; }
             public string Password { get; set; }
         }
         public class Handler : IRequestHandler<RegisterUserCommand, GoodFoodUserDto>
@@ -24,7 +24,7 @@ namespace Application.GoodFoodUsers
             public async Task<GoodFoodUserDto> Handle(RegisterUserCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.Register(request.UserName, request.Password);
+                var user = await _userAuth.Register(request.Username, request.Password);
                 return user;
             }
         }

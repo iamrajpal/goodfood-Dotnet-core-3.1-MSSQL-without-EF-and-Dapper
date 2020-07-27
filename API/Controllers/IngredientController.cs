@@ -26,11 +26,10 @@ namespace API.Controllers
             command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpDelete("{username}/delete")]
-        public async Task<ActionResult<Unit>> Delete(string username, DeleteIngredient.DeleteIngredientCommand command)
+        [HttpDelete("{username}/user/{ingredientId}/delete")]
+        public async Task<ActionResult<Unit>> Delete(string username, int ingredientId)
         {
-            command.Username = username;
-            return await Mediator.Send(command);
+            return await Mediator.Send(new DeleteIngredient.DeleteIngredientCommand{Username = username, IngredientId = ingredientId});
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Application.GoodFoodUsers
     {
         public class LoginUserCommand : IRequest<GoodFoodUserDto>
         {
-            public string UserName { get; set; }
+            public string Username { get; set; }
             public string Password { get; set; }
         }
         public class Handler : IRequestHandler<LoginUserCommand, GoodFoodUserDto>
@@ -28,9 +28,9 @@ namespace Application.GoodFoodUsers
             public async Task<GoodFoodUserDto> Handle(LoginUserCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.UserName);
+                var username = await _userAuth.VerifyUser(request.Username, request.Password);
                 
-                if (user == null)
+                if (username == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
              
                 // if (!verifyPasswordHash(request.Password, user.User_Password_Hash, user.User_Password_Salt))
@@ -38,7 +38,7 @@ namespace Application.GoodFoodUsers
 
                 var returnUser = new GoodFoodUserDto
                 {
-                    Username = user.Username + " successfully login"
+                    Username = username + " successfully login"
                 };
 
                 return returnUser;

@@ -11,5 +11,6 @@ namespace Application.Interfaces
         Task<bool> IsUserExits(string username);
         Task<List<GoodFoodUserDto>> GetAllUser();
         Task<GoodFoodUser> GetUser(string username);
+        Task<string> VerifyUser(string username, string password);
     }
 }
