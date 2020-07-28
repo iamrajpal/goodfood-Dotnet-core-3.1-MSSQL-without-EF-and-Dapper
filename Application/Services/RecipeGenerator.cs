@@ -164,5 +164,85 @@ namespace Application.Services
 
             return checkDeleteStatus;
         }
+
+        public async Task<List<Recipe>> GetRecipes(int userId, string commandText)
+        {
+            List<Recipe> recipes = new List<Recipe>();
+            bool isRecipeExist = false;          
+            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+            user_id.Value = userId;
+
+            int preRecipeId = -1;
+            int newRecipeId = -10;
+
+            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, commandText,
+                CommandType.Text, user_id))
+            {
+                var recipe = new Recipe();
+                bool start = true;
+                while (reader.Read())
+                {
+                    newRecipeId = (int)reader["recipe_id"];
+                    if (start)
+                    {
+                        recipe.Id = (int)reader["recipe_id"];
+                        recipe.Title = reader["recipe_title"].ToString();
+                        recipe.Description = reader["recipe_description"].ToString();
+                        recipe.SlugUrl = reader["recipe_slug"].ToString();
+                        recipe.Category = (RecipeCategory)Enum.Parse(typeof(RecipeCategory), reader["recipe_category"].ToString());
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    if (newRecipeId == preRecipeId)
+                    {
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    if (newRecipeId != preRecipeId && !start)
+                    {
+                        if (recipe != null)
+                        {
+                            recipes.Add(recipe);
+                        }
+                        recipe = new Recipe();
+                        recipe.Id = (int)reader["recipe_id"];
+                        recipe.Title = reader["recipe_title"].ToString();
+                        recipe.Description = reader["recipe_description"].ToString();
+                        recipe.SlugUrl = reader["recipe_slug"].ToString();
+                        recipe.Category = (RecipeCategory)Enum.Parse(typeof(RecipeCategory), reader["recipe_category"].ToString());
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    isRecipeExist = true;
+                    start = false;
+                    preRecipeId = (int)reader["recipe_id"];
+                }
+
+                await reader.CloseAsync();
+
+            }
+            return isRecipeExist ? recipes : null;
+        }
     }
 }

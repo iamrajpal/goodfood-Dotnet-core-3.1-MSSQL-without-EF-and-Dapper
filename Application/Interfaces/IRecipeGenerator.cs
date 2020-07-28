@@ -12,6 +12,7 @@ namespace Application.Interfaces
         Task<bool> IsRecipeExits(string recipeTitle, int userId);
         Task<bool> Update(int userId, int recipeId, Recipe recipe);
         Task<Recipe> GetRecipe(int recipeId, int userId);
+        Task<List<Recipe>> GetRecipes(int userId, string commandText);
         Task<bool> Delete(int userId, List<int> recipeIds);
     }
 }
