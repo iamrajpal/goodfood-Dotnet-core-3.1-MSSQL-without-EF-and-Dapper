@@ -83,7 +83,7 @@ namespace Application.Recipies
                     {
                         bool recipeIngredient = await _recipeIngredientGenerator.Create(createdRecipe.Id, ingredient.IngredientId, ingredient.Amount);
                         if (!recipeIngredient)
-                            throw new Exception("Problem creating recipe");
+                            throw new Exception("Problem adding recipe_Ingredients");
                     }
                 }
 
