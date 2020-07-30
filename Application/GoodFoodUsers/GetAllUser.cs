@@ -7,10 +7,10 @@ using MediatR;
 
 namespace Application.GoodFoodUsers
 {
-    public class GetUser
+    public class GetAllUser
     {
-        public class GetUserQuery : IRequest<List<GoodFoodUserDto>> { }
-        public class Handler : IRequestHandler<GetUserQuery, List<GoodFoodUserDto>>
+        public class GetAllUserQuery : IRequest<List<GoodFoodUserDto>> { }
+        public class Handler : IRequestHandler<GetAllUserQuery, List<GoodFoodUserDto>>
         {
             private readonly IUserAuth _userAuth;
             public Handler(IUserAuth userAuth)
@@ -18,7 +18,7 @@ namespace Application.GoodFoodUsers
                 _userAuth = userAuth;
             }
 
-            public async Task<List<GoodFoodUserDto>> Handle(GetUserQuery request,
+            public async Task<List<GoodFoodUserDto>> Handle(GetAllUserQuery request,
                 CancellationToken cancellationToken)
             {
                 var users = await _userAuth.GetAllUser();

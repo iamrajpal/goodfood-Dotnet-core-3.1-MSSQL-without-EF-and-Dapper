@@ -9,6 +9,14 @@ using MediatR;
 using Application.GoodFoodUsers;
 using API.Middleware;
 using Application.Services;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using System.Reflection;
 
 namespace API
 {
@@ -32,9 +40,27 @@ namespace API
                     .WithOrigins("http://localhost:3000", "http://localhost:5000").AllowCredentials();
                 });
             });
-            services.AddMediatR(typeof(GetUser.Handler).Assembly);
+            services.AddMediatR(typeof(GetAllUser.Handler).Assembly);
+
             services.AddControllers();
 
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["TokenKey"]));
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(opt =>
+                {
+                    opt.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = key,
+                        ValidateAudience = false,
+                        ValidateIssuer = false,
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero
+                    };                    
+                });
+
+          
+            services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
             services.AddScoped<IRecipeGenerator, RecipeGenerator>();
@@ -55,7 +81,7 @@ namespace API
 
             app.UseRouting();
             app.UseCors("CorsPolicy");
-
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

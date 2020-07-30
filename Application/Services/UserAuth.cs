@@ -39,7 +39,7 @@ namespace Infrastructure.Security
             return false;
         }
 
-        public async Task<GoodFoodUserDto> Register(string username, string password)
+        public async Task<GoodFoodUser> Register(string username, string password)
         {
             if (await IsUserExits(username))
                 throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
@@ -63,7 +63,7 @@ namespace Infrastructure.Security
                 user_password_salt);
             if (rows >= 1)
             {
-                var user = new GoodFoodUserDto
+                var user = new GoodFoodUser
                 {
                     Username = username
                 };
@@ -117,12 +117,13 @@ namespace Infrastructure.Security
             }
             return isUserExist ? user : null;
         }
-        public async Task<string> VerifyUser(string username, string password)
+        public async Task<GoodFoodUser> VerifyUser(string username, string password)
         {
-            string usernameFromDb = string.Empty;
             string selectCommandText = "dbo.getUser";
             SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
             user_name.Value = username;
+            var userFromDB = new GoodFoodUser();
+
 
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
                 CommandType.StoredProcedure, user_name))
@@ -135,11 +136,11 @@ namespace Infrastructure.Security
                     if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
                         throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                    usernameFromDb = reader["user_name"].ToString();
+                    userFromDB.Username = reader["user_name"].ToString();
                 }
                 await reader.CloseAsync();
             }
-            return usernameFromDb;
+            return userFromDB;
         }
         private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
         {

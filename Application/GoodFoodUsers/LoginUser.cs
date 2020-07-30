@@ -19,8 +19,10 @@ namespace Application.GoodFoodUsers
         {
             private readonly IUserAuth _userAuth;
             private readonly IConnectionString _connection;
-            public Handler(IUserAuth userAuth, IConnectionString connection)
+            private readonly IJwtGenerator _jwtGenerator;
+            public Handler(IUserAuth userAuth, IConnectionString connection, IJwtGenerator jwtGenerator)
             {
+                _jwtGenerator = jwtGenerator;
                 _connection = connection;
                 _userAuth = userAuth;
             }
@@ -28,19 +30,23 @@ namespace Application.GoodFoodUsers
             public async Task<GoodFoodUserDto> Handle(LoginUserCommand request,
                 CancellationToken cancellationToken)
             {
-                var username = await _userAuth.VerifyUser(request.Username, request.Password);
-                
-                if (string.IsNullOrEmpty(username))
-                    throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });             
-             
-                var returnUser = new GoodFoodUserDto
+                if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+                    throw new RestException(HttpStatusCode.BadRequest, new { User_Password = "Required" });
+
+                var userFromDB = await _userAuth.VerifyUser(request.Username, request.Password);
+
+                if (userFromDB == null)
+                    throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+
+                var user = new GoodFoodUserDto
                 {
-                    Username = username
+                    Username = userFromDB.Username,
+                    Token = _jwtGenerator.CreateToken(userFromDB)
                 };
 
-                return returnUser;
+                return user;
             }
-            
+
         }
     }
 }

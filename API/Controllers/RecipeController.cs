@@ -4,10 +4,12 @@ using Application.Dtos;
 using Application.Recipies;
 using Domain.Entities;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    [Authorize]
     public class RecipeController : BaseController
     {
         [HttpPost("{username}/create")]
@@ -30,7 +32,7 @@ namespace API.Controllers
             return await Mediator.Send(command);
         }
         [HttpGet("list")]
-        public async Task<ActionResult<List<Recipe>>> List(string username, int? limit, 
+        public async Task<ActionResult<List<Recipe>>> List(string username, int? limit,
             int? offset)
         {
             return await Mediator.Send(new GetRecipies.GetRecipiesQuery(username, limit, offset));
