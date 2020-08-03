@@ -123,13 +123,15 @@ namespace Infrastructure.Security
             SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
             user_name.Value = username;
             var userFromDB = new GoodFoodUser();
-
+            bool isUserInDb = false;
 
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
                 CommandType.StoredProcedure, user_name))
             {
                 while (reader.Read())
                 {
+                    isUserInDb = true;
+
                     var pass = reader["user_password"];
                     var salt = reader["user_password_salt"];
 
@@ -140,7 +142,7 @@ namespace Infrastructure.Security
                 }
                 await reader.CloseAsync();
             }
-            return userFromDB;
+            return isUserInDb ? userFromDB : null;
         }
         private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
         {
