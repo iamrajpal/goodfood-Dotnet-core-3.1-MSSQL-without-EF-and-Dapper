@@ -12,15 +12,17 @@ namespace Application.GoodFoodUsers
     {
         public class LoginUserCommand : IRequest<GoodFoodUserDto>
         {
-            public string UserName { get; set; }
+            public string Username { get; set; }
             public string Password { get; set; }
         }
         public class Handler : IRequestHandler<LoginUserCommand, GoodFoodUserDto>
         {
             private readonly IUserAuth _userAuth;
             private readonly IConnectionString _connection;
-            public Handler(IUserAuth userAuth, IConnectionString connection)
+            private readonly IJwtGenerator _jwtGenerator;
+            public Handler(IUserAuth userAuth, IConnectionString connection, IJwtGenerator jwtGenerator)
             {
+                _jwtGenerator = jwtGenerator;
                 _connection = connection;
                 _userAuth = userAuth;
             }
@@ -28,34 +30,23 @@ namespace Application.GoodFoodUsers
             public async Task<GoodFoodUserDto> Handle(LoginUserCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.UserName);
-                
-                if (user == null)
-                    throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
-             
-                // if (!verifyPasswordHash(request.Password, user.User_Password_Hash, user.User_Password_Salt))
-                //     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+                if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+                    throw new RestException(HttpStatusCode.BadRequest, new { User_Password = "Required" });
 
-                var returnUser = new GoodFoodUserDto
+                var userFromDB = await _userAuth.VerifyUser(request.Username, request.Password);
+
+                if (userFromDB == null)
+                    throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+
+                var user = new GoodFoodUserDto
                 {
-                    Username = user.Username + " successfully login"
+                    Username = userFromDB.Username,
+                    Token = _jwtGenerator.CreateToken(userFromDB)
                 };
 
-                return returnUser;
+                return user;
             }
 
-            private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
-            {
-                using (var hmac = new System.Security.Cryptography.HMACSHA512(user_Password_Salt))
-                {
-                    var computerHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                    for (int i = 0; i < computerHash.Length; i++)
-                    {
-                        if (computerHash[i] != user_Password_Hash[i]) return false;
-                    }
-                }
-                return true;
-            }
         }
     }
 }

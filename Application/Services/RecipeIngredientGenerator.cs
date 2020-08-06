@@ -18,31 +18,28 @@ namespace Application.Services
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> Create(int recipeId, int ingredientId, int? measurementId)
+        public async Task<bool> Create(int recipeId, int ingredientId, string measurementAmount)
         {
 
-            string insertCommandText = @"INSERT INTO [dbo].[recipe_ingredients] (recipe_id, ingredient_id, measurement_id)
-                values (@recipeId, @ingredientId, @measurementId)";
+            string insertCommandText = @"INSERT INTO [dbo].[recipe_ingredients] (recipe_id, ingredient_id, amount)
+                values (@recipeId, @ingredientId, @amount)";
 
             SqlParameter recipe_id = new SqlParameter("@recipeId", recipeId);
             SqlParameter ingredient_id = new SqlParameter("@ingredientId", ingredientId);
-            SqlParameter measurement_id = new SqlParameter("@measurementId", SqlDbType.Int);
+            SqlParameter amount = new SqlParameter("@amount", measurementAmount);
+            // SqlParameter measurement_id = new SqlParameter("@measurementId", SqlDbType.Int);
 
-            measurement_id.Value = (object)measurementId ?? DBNull.Value;
+            // measurement_id.Value = (object)measurementId ?? DBNull.Value;
 
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text,
-                recipe_id, ingredient_id, measurement_id);
+                recipe_id, ingredient_id, amount);
             return rows >= 1 ? true : false;
         }
 
-        public async Task<bool> IsIdsExitInRecipeIngredient(int ingredientId, int recipeId, int? measurementId)
+        public async Task<bool> IsIdsExitInRecipeIngredient(int ingredientId, int recipeId)
         {
             string commandText = @"SELECT Count([recipe_id]) FROM [dbo].[recipe_ingredients] 
-                WHERE recipe_id=@recipeId AND ingredient_id=@ingredientId AND measurement_id=@measurementId";
-
-            SqlParameter measurement_id = new SqlParameter("@measurementId", SqlDbType.Int);
-            measurement_id.Value = measurementId;
-            measurement_id.Value = (object)measurementId ?? DBNull.Value;
+                WHERE recipe_id=@recipeId AND ingredient_id=@ingredientId";
 
             SqlParameter ingredient_id = new SqlParameter("@ingredientId", SqlDbType.Int);
             ingredient_id.Value = ingredientId;
@@ -55,8 +52,7 @@ namespace Application.Services
                 commandText,
                 CommandType.Text,
                 recipe_id,
-                ingredient_id,
-                measurement_id);
+                ingredient_id);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
@@ -65,17 +61,17 @@ namespace Application.Services
             throw new Exception("Problem saving changes");
         }
 
-        public async Task<int> Update(int recipeId, int ingredientId, int measurementId)
+        public async Task<int> Update(int recipeId, int ingredientId, string measurementAmount)
         {
-            string updateCommandText = @"UPDATE [dbo].[recipe_ingredients] SET measurement_id = @measurementId 
+            string updateCommandText = @"UPDATE [dbo].[recipe_ingredients] SET amount = @measurementAmount 
                 WHERE (ingredient_id=@ingredientId AND recipe_id=@recipeId)";
 
             SqlParameter ingredient_id = new SqlParameter("@ingredientId", ingredientId);
             SqlParameter recipe_id = new SqlParameter("@recipeId", recipeId);
-            SqlParameter measurement_Id= new SqlParameter("@measurementId", measurementId);
+            SqlParameter amount = new SqlParameter("@measurementAmount", measurementAmount);
 
             Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
-                ingredient_id, recipe_id, measurement_Id);
+                ingredient_id, recipe_id, amount);
 
             return rows >= 1 ? rows : 0;
             throw new Exception("Problem saving changes");

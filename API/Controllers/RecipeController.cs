@@ -1,12 +1,14 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Application.Dtos;
 using Application.Recipies;
 using Domain.Entities;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    [Authorize]
     public class RecipeController : BaseController
     {
         [HttpPost("{username}/create")]
@@ -27,6 +29,12 @@ namespace API.Controllers
         {
             command.Username = username;
             return await Mediator.Send(command);
+        }
+        [HttpGet("list")]
+        public async Task<ActionResult<List<Recipe>>> List(string username, int? limit,
+            int? offset)
+        {
+            return await Mediator.Send(new GetRecipies.GetRecipiesQuery(username, limit, offset));
         }
 
     }

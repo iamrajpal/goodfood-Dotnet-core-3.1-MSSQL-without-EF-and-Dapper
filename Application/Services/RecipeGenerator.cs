@@ -22,21 +22,21 @@ namespace Application.Services
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> IsRecipeExits(string recipename, int userId)
+        public async Task<bool> IsRecipeExits(string recipeTitle, int userId)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
-                WHERE recipe_title=@recipename AND user_Id=@userId";
-            SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
-            parameterRecipename.Value = recipename;
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
+                WHERE recipe_title=@recipeTitle AND user_Id=@userId";
+            SqlParameter recipe_title = new SqlParameter("@recipename", SqlDbType.VarChar);
+            recipe_title.Value = recipeTitle;
+            SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
+            user_Id.Value = userId;
 
             Object oValue = await SqlHelper.ExecuteScalarAsync(
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterRecipename,
-                parameterUserId);
+                recipe_title,
+                user_Id);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
@@ -45,25 +45,22 @@ namespace Application.Services
             return false;
         }
 
-        public async Task<bool> IsRecipeExitsWithSlug(string recipename, int userId, string recipeSlug)
+        public async Task<bool> IsRecipeExitsWithSlug(int userId, string recipeSlug)
         {
             string commandText = @"SELECT Count([recipe_title]) FROM [dbo].[recipes] 
                 WHERE recipe_slug=@recipeSlug AND user_Id=@userId";
-                
-            SqlParameter parameterRecipename = new SqlParameter("@recipename", SqlDbType.VarChar);
-            parameterRecipename.Value = recipename;
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
-            SqlParameter parameterRecipeSlug = new SqlParameter("@recipeSlug", SqlDbType.NVarChar);
-            parameterRecipeSlug.Value = recipeSlug;
+
+            SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
+            user_Id.Value = userId;
+            SqlParameter recipe_slug = new SqlParameter("@recipeSlug", SqlDbType.NVarChar);
+            recipe_slug.Value = recipeSlug;
 
             Object oValue = await SqlHelper.ExecuteScalarAsync(
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterRecipename,
-                parameterUserId,
-                parameterRecipeSlug);
+                user_Id,
+                recipe_slug);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
@@ -127,13 +124,13 @@ namespace Application.Services
             var recipe = new Recipe();
             bool isRecipeExist = false;
             string selectCommandText = "dbo.getRecipeByUserId";
-            SqlParameter parameterUserId = new SqlParameter("@userId", SqlDbType.Int);
-            parameterUserId.Value = userId;
-            SqlParameter parameterRecipeId = new SqlParameter("@recipeId", SqlDbType.Int);
-            parameterRecipeId.Value = recipeId;
-            
+            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+            user_id.Value = userId;
+            SqlParameter recipe_id = new SqlParameter("@recipeId", SqlDbType.Int);
+            recipe_id.Value = recipeId;
+
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, parameterUserId, parameterRecipeId))
+                CommandType.StoredProcedure, user_id, recipe_id))
             {
                 while (reader.Read())
                 {
@@ -166,6 +163,86 @@ namespace Application.Services
             }
 
             return checkDeleteStatus;
+        }
+
+        public async Task<List<Recipe>> GetRecipes(int userId, string commandText)
+        {
+            List<Recipe> recipes = new List<Recipe>();
+            bool isRecipeExist = false;          
+            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+            user_id.Value = userId;
+
+            int preRecipeId = -1;
+            int newRecipeId = -10;
+
+            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, commandText,
+                CommandType.Text, user_id))
+            {
+                var recipe = new Recipe();
+                bool start = true;
+                while (reader.Read())
+                {
+                    newRecipeId = (int)reader["recipe_id"];
+                    if (start)
+                    {
+                        recipe.Id = (int)reader["recipe_id"];
+                        recipe.Title = reader["recipe_title"].ToString();
+                        recipe.Description = reader["recipe_description"].ToString();
+                        recipe.SlugUrl = reader["recipe_slug"].ToString();
+                        recipe.Category = (RecipeCategory)Enum.Parse(typeof(RecipeCategory), reader["recipe_category"].ToString());
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    if (newRecipeId == preRecipeId)
+                    {
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    if (newRecipeId != preRecipeId && !start)
+                    {
+                        if (recipe != null)
+                        {
+                            recipes.Add(recipe);
+                        }
+                        recipe = new Recipe();
+                        recipe.Id = (int)reader["recipe_id"];
+                        recipe.Title = reader["recipe_title"].ToString();
+                        recipe.Description = reader["recipe_description"].ToString();
+                        recipe.SlugUrl = reader["recipe_slug"].ToString();
+                        recipe.Category = (RecipeCategory)Enum.Parse(typeof(RecipeCategory), reader["recipe_category"].ToString());
+                        var Ingredient = new Ingredients
+                        {
+                            Id = (int)reader["ingredient_id"],
+                            Name = (string)reader["ingredient_name"],
+                            Description = (string)reader["ingredient_description"],
+                            SlugUrl = (string)reader["ingredient_slug"],
+                            Amount = (string)reader["amount"],
+                        };
+                        recipe.Ingredients.Add(Ingredient);
+                    }
+                    isRecipeExist = true;
+                    start = false;
+                    preRecipeId = (int)reader["recipe_id"];
+                }
+
+                await reader.CloseAsync();
+
+            }
+            return isRecipeExist ? recipes : null;
         }
     }
 }

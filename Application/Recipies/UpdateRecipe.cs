@@ -14,19 +14,16 @@ namespace Application.Recipies
 {
     public class UpdateRecipe
     {
-        public class UpdateMeasurement
-        {
-            public int MeasurementId { get; set; }
-            public string Amount { get; set; }
-        }
+
         public class UpdateIngredients
         {
             public int IngredientId { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
             public string SlugUrl { get; set; }
+            public string Amount { get; set; }
             public bool IsNewIngredient { get; set; }
-            public UpdateMeasurement Measurement { get; set; }
+
         }
         public class UpdateRecipeCommand : IRequest
         {
@@ -42,17 +39,14 @@ namespace Application.Recipies
             private readonly IUserAuth _userAuth;
             private readonly IRecipeGenerator _recipeGenerator;
             private readonly IIngredientGenerator _ingredientGenerator;
-            private readonly IMeasurementGenerator _measurementGenerator;
             private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
 
             public Handler(
                 IUserAuth userAuth,
                 IRecipeGenerator recipeGenerator,
                 IIngredientGenerator ingredientGenerator,
-                IMeasurementGenerator measurementGenerator,
                 IRecipeIngredientGenerator recipeIngredientGenerator)
             {
-                _measurementGenerator = measurementGenerator;
                 _recipeIngredientGenerator = recipeIngredientGenerator;
                 _ingredientGenerator = ingredientGenerator;
                 _recipeGenerator = recipeGenerator;
@@ -70,10 +64,10 @@ namespace Application.Recipies
                 if (recipe == null)
                     throw new RestException(HttpStatusCode.NotFound, new { Recipe = "Not found" });
 
-                bool haveIngredients = false;
+                bool haveIngredient = false;
                 if (request.UpdateIngredients != null && request.UpdateIngredients.Count > 0)
                 {
-                    haveIngredients = true;
+                    haveIngredient = true;
                     foreach (var test in request.UpdateIngredients)
                     {
                         if (test.IsNewIngredient)
@@ -85,13 +79,10 @@ namespace Application.Recipies
                         {
                             if (!await _ingredientGenerator.IsIngredientExitById(test.IngredientId, user.Id))
                                 throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
-                            if (test.IngredientId > 0 && test.Measurement != null && test.Measurement.MeasurementId > 0)
-                            {
-                                if (!await _recipeIngredientGenerator.IsIdsExitInRecipeIngredient(test.IngredientId, request.RecipeId, test.Measurement.MeasurementId))
-                                    throw new RestException(HttpStatusCode.NotFound, new { RecipeIngredient = "Not exist" });
-                            }
+                            //to check right combination of Ingredient and recipe
+                            if (!await _recipeIngredientGenerator.IsIdsExitInRecipeIngredient(test.IngredientId, request.RecipeId))
+                                throw new RestException(HttpStatusCode.NotFound, new { RecipeIngredient = "Not exist" });
                         }
-
                     }
                 }
 
@@ -105,13 +96,11 @@ namespace Application.Recipies
                 var success = await _recipeGenerator.Update(user.Id, request.RecipeId, updateRecipe);
                 if (!success) throw new Exception("Problem saving changes");
 
-                if (haveIngredients)
+                if (haveIngredient)
                 {
                     foreach (var updateIngredient in request.UpdateIngredients)
                     {
                         var ingredientIdentityId = 0;
-                        int? measurementIdentityId = null;
-
                         if (updateIngredient.IsNewIngredient)
                         {
                             var createIngredient = new Domain.Entities.Ingredients
@@ -122,13 +111,8 @@ namespace Application.Recipies
                             };
 
                             ingredientIdentityId = await _ingredientGenerator.Create(user.Id, createIngredient);
-                            if (updateIngredient.Measurement != null)
-                            {
-                                measurementIdentityId = await _measurementGenerator.Create(updateIngredient.Measurement.Amount);
-                                if (measurementIdentityId <= 0) throw new Exception("Problem saving changes with new measurement");
-                            }
 
-                            bool recipeIngredient = await _recipeIngredientGenerator.Create(request.RecipeId, ingredientIdentityId, measurementIdentityId);
+                            bool recipeIngredient = await _recipeIngredientGenerator.Create(request.RecipeId, ingredientIdentityId, updateIngredient.Amount);
                             if (!recipeIngredient)
                                 throw new Exception("Problem creating recipe ingredient list");
                         }
@@ -144,28 +128,14 @@ namespace Application.Recipies
                                 };
 
                                 ingredientIdentityId = await _ingredientGenerator.Update(user.Id, updateIngredient.IngredientId, updateIngredent);
+                                if (ingredientIdentityId <= 0) throw new Exception("Problem saving changes ingredients");
                             }
-                            if (ingredientIdentityId <= 0) throw new Exception("Problem saving changes ingredients");
 
-                            if (updateIngredient.Measurement != null && !string.IsNullOrWhiteSpace(updateIngredient.Measurement.Amount))
+
+                            if (!string.IsNullOrWhiteSpace(updateIngredient.Amount))
                             {
-                                var measurementFromDB = await _measurementGenerator.GetMeasurement(updateIngredient.Measurement.MeasurementId);
-                                if (measurementFromDB != null)
-                                {
-                                    var amount = updateIngredient.Measurement.Amount ?? measurementFromDB.Amount;
-                                    var isMeasurementSuccess = await _measurementGenerator.Update(updateIngredient.Measurement.MeasurementId, amount);
-                                    if (!isMeasurementSuccess) throw new Exception("Problem saving changes with measurement");
-                                }
-                                else
-                                {
-
-                                    var newMeasurementIdentityId = await _measurementGenerator.Create(updateIngredient.Measurement.Amount);
-                                    if (newMeasurementIdentityId <= 0) throw new Exception("Problem saving changes with new measurement");
-
-                                    var newMeasurementResult = await _recipeIngredientGenerator.Update(request.RecipeId, updateIngredient.IngredientId, newMeasurementIdentityId);
-                                    if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new recipe list");
-                                }
-
+                                var newMeasurementResult = await _recipeIngredientGenerator.Update(request.RecipeId, updateIngredient.IngredientId, updateIngredient.Amount);
+                                if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new recipe list");
                             }
                         }
                     }

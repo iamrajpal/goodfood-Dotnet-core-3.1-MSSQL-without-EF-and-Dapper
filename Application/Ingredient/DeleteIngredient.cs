@@ -37,7 +37,7 @@ namespace Application.Ingredient
                     throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
 
                 if (await _ingredientGenerator.IsIngredientExitInRecipeIngredient(request.IngredientId))
-                    throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Recipe use this ingredient" });
+                    throw new RestException(HttpStatusCode.BadRequest, new { Ingredient = "Recipe use this ingredient" });
               
                 var success = await _ingredientGenerator.Delete(user.Id, request.IngredientId);
                 if (success) return Unit.Value;

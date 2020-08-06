@@ -167,13 +167,13 @@ namespace Application.Services
             string commandText = @"SELECT Count([ingredient_id]) FROM [dbo].[recipe_ingredients] 
                 WHERE ingredient_id=@ingredientId";
 
-            SqlParameter parameterIngredientId = new SqlParameter("@ingredientId", SqlDbType.Int);
-            parameterIngredientId.Value = ingredientId;
+            SqlParameter ingredient_id = new SqlParameter("@ingredientId", SqlDbType.Int);
+            ingredient_id.Value = ingredientId;
             Object oValue = await SqlHelper.ExecuteScalarAsync(
                 conStr,
                 commandText,
                 CommandType.Text,
-                parameterIngredientId);
+                ingredient_id);
 
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))

@@ -33,18 +33,15 @@ namespace Application.Recipies
             private readonly IUserAuth _userAuth;
             private readonly IRecipeGenerator _recipeGenerator;
             private readonly IIngredientGenerator _ingredientGenerator;
-            private readonly IMeasurementGenerator _measurementGenerator;
             private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
 
             public Handler(
                 IUserAuth userAuth,
                 IRecipeGenerator recipeGenerator,
                 IIngredientGenerator ingredientGenerator,
-                IMeasurementGenerator measurementGenerator,
                 IRecipeIngredientGenerator recipeIngredientGenerator)
             {
                 _ingredientGenerator = ingredientGenerator;
-                _measurementGenerator = measurementGenerator;
                 _recipeIngredientGenerator = recipeIngredientGenerator;
                 _recipeGenerator = recipeGenerator;
                 _userAuth = userAuth;
@@ -57,9 +54,9 @@ namespace Application.Recipies
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                if (await _recipeGenerator.IsRecipeExitsWithSlug(request.Title, user.Id, request.SlugUrl))
+                if (await _recipeGenerator.IsRecipeExitsWithSlug(user.Id, request.SlugUrl))
                     throw new RestException(HttpStatusCode.BadRequest, new { Recipe_Slug = "Already exist" });
-                
+
                 bool haveIngredients = false;
                 if (request.Ingredients != null && request.Ingredients.Count > 0)
                 {
@@ -70,7 +67,6 @@ namespace Application.Recipies
                             throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
                     }
                 }
-
                 var toCreateRecipe = new Recipe
                 {
                     Title = request.Title,
@@ -85,14 +81,9 @@ namespace Application.Recipies
                 {
                     foreach (var ingredient in request.Ingredients)
                     {
-                        int? measurementId = null;
-                        if (!string.IsNullOrEmpty(ingredient.Amount))
-                        {
-                            measurementId = await _measurementGenerator.Create(ingredient.Amount);
-                        }
-                        bool recipeIngredient = await _recipeIngredientGenerator.Create(createdRecipe.Id, ingredient.IngredientId, measurementId);
+                        bool recipeIngredient = await _recipeIngredientGenerator.Create(createdRecipe.Id, ingredient.IngredientId, ingredient.Amount);
                         if (!recipeIngredient)
-                            throw new Exception("Problem creating recipe");
+                            throw new Exception("Problem adding recipe_Ingredients");
                     }
                 }
 

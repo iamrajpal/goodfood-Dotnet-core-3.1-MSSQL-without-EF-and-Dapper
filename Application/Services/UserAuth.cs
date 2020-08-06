@@ -11,6 +11,7 @@ using Application.Errors;
 using Application.Interfaces;
 using Domain.Entities;
 using Application.SqlClientSetup;
+using System.Text;
 
 namespace Infrastructure.Security
 {
@@ -22,15 +23,6 @@ namespace Infrastructure.Security
         {
             _connection = connection;
             conStr = _connection.GetConnectionString();
-        }
-       
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-        {
-            using (var hmac = new System.Security.Cryptography.HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            }
         }
 
         public async Task<bool> IsUserExits(string username)
@@ -47,7 +39,7 @@ namespace Infrastructure.Security
             return false;
         }
 
-        public async Task<GoodFoodUserDto> Register(string username, string password)
+        public async Task<GoodFoodUser> Register(string username, string password)
         {
             if (await IsUserExits(username))
                 throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
@@ -55,17 +47,23 @@ namespace Infrastructure.Security
             byte[] passwordHash, passwordSalt;
             CreatePasswordHash(password, out passwordHash, out passwordSalt);
 
-            string insertCommandText = @"INSERT INTO [dbo].[goodfooduser] (user_name, user_password_hash, user_password_salt)
-                values (@user_Name,@user_password_hash,@user_password_salt)";
+            string insertCommandText = @"INSERT INTO [dbo].[goodfooduser] (user_name, user_password, user_password_salt)
+                values (@user_Name,@passwordHash,@passwordSalt)";
 
             SqlParameter user_name = new SqlParameter("@user_Name", username);
-            SqlParameter user_password_hash = new SqlParameter("@user_password_hash", passwordHash);
-            SqlParameter user_password_salt = new SqlParameter("@user_password_salt", passwordSalt);
+            SqlParameter user_password = new SqlParameter("@passwordHash", passwordHash);
+            SqlParameter user_password_salt = new SqlParameter("@passwordSalt", passwordSalt);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, insertCommandText, CommandType.Text, user_name, user_password_hash, user_password_salt);
+            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(
+                conStr,
+                insertCommandText,
+                CommandType.Text,
+                user_name,
+                user_password,
+                user_password_salt);
             if (rows >= 1)
             {
-                var user = new GoodFoodUserDto
+                var user = new GoodFoodUser
                 {
                     Username = username
                 };
@@ -102,26 +100,50 @@ namespace Infrastructure.Security
             var user = new GoodFoodUser();
             bool isUserExist = false;
             string selectCommandText = "dbo.getUser";
-            SqlParameter parameterUsername = new SqlParameter("@username", SqlDbType.VarChar);
-            parameterUsername.Value = username;
+            SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
+            user_name.Value = username;
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, parameterUsername))
+                CommandType.StoredProcedure, user_name))
             {
                 while (reader.Read())
                 {
                     isUserExist = true;
-                    user.Username = reader["user_name"].ToString();
-                    var pass = ObjectToByteArray(reader["user_password_hash"]);
-                    user.PasswordHash = pass;
-                    var salt = ObjectToByteArray(reader["user_password_salt"]);
-                    user.PasswordSalt = salt;
+                    user.Username = (string)reader["user_name"];
+                    user.Password = (byte[])reader["user_password"];
+                    user.PasswordSalt = (byte[])reader["user_password_salt"];
                     user.Id = (int)reader["user_id"];
-                } 
+                }
                 await reader.CloseAsync();
             }
             return isUserExist ? user : null;
         }
+        public async Task<GoodFoodUser> VerifyUser(string username, string password)
+        {
+            string selectCommandText = "dbo.getUser";
+            SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
+            user_name.Value = username;
+            var userFromDB = new GoodFoodUser();
+            bool isUserInDb = false;
 
+            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                CommandType.StoredProcedure, user_name))
+            {
+                while (reader.Read())
+                {
+                    isUserInDb = true;
+
+                    var pass = reader["user_password"];
+                    var salt = reader["user_password_salt"];
+
+                    if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
+                        throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+
+                    userFromDB.Username = reader["user_name"].ToString();
+                }
+                await reader.CloseAsync();
+            }
+            return isUserInDb ? userFromDB : null;
+        }
         private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512(user_Password_Salt))
@@ -133,19 +155,16 @@ namespace Infrastructure.Security
                 }
             }
             return true;
-        }
+        }       
 
-        byte[] ObjectToByteArray(object obj)
+        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
-            if (obj == null)
-                return null;
-            BinaryFormatter bf = new BinaryFormatter();
-            using (MemoryStream ms = new MemoryStream())
+            using (var hmac = new System.Security.Cryptography.HMACSHA512())
             {
-                bf.Serialize(ms, obj);
-                return ms.ToArray();
+                passwordSalt = hmac.Key;
+                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
             }
         }
-        
+
     }
 }
