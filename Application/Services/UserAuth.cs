@@ -2,16 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.IO;
 using System.Net;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Errors;
 using Application.Interfaces;
 using Domain.Entities;
 using Application.SqlClientSetup;
-using System.Text;
 
 namespace Infrastructure.Security
 {

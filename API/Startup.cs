@@ -28,6 +28,7 @@ namespace API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
             services.AddCors(opt =>
             {
                 opt.AddPolicy("CorsPolicy", policy =>
@@ -52,16 +53,31 @@ namespace API
                         ValidateIssuer = false,
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.Zero
-                    };                    
+                    };
                 });
 
-          
+
             services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
             services.AddScoped<IRecipeGenerator, RecipeGenerator>();
             services.AddScoped<IIngredientGenerator, IngredientGenerator>();
             services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
+
+            string conStr = Configuration.GetConnectionString("DefaultConnection");
+            GenerateDB(conStr);
+        }
+
+        private void GenerateDB(string conStr)
+        {
+            try
+            {
+                CreateDB.CreateAndSeedData(conStr).Wait();
+            }
+            catch (System.Exception)
+            {
+                throw;
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
