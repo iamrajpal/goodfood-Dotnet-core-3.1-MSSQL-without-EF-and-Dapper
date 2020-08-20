@@ -23,7 +23,7 @@ namespace API.Controllers
             return await Mediator.Send(command);
         }
         [HttpGet("alluser")]
-        [Authorize]
+        // [Authorize]
         public async Task<ActionResult<List<GoodFoodUserDto>>> AllUser()
         {
             return await Mediator.Send(new GetAllUser.GetAllUserQuery());

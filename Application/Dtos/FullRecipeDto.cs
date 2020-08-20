@@ -1,5 +1,3 @@
-using Domain.Enums;
-
 namespace Application.Dtos
 {
     public class FullRecipeDto
@@ -8,6 +6,6 @@ namespace Application.Dtos
         public string Title { get; set; }
         public string Description { get; set; }
         public string SlugUrl { get; set; }
-        public RecipeCategory Category { get; set; }
+        public int DishCategoryId { get; set; }
     }
 }

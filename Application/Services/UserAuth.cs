@@ -22,13 +22,13 @@ namespace Infrastructure.Security
             conStr = _connection.GetConnectionString();
         }
 
-        public async Task<bool> IsUserExits(string username)
+        public async Task<bool> IsUserExits(string userName)
         {
-            string commandText = "Select Count([user_name]) FROM [dbo].[goodfooduser] Where user_name=@username";
-            SqlParameter parameterUsername = new SqlParameter("@username", SqlDbType.VarChar);
-            parameterUsername.Value = username;
+            string commandText = "Select Count([UserName]) FROM GoodFoodUser Where UserName=@userName";
+            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+            user_name.Value = userName;
 
-            Object oValue = await SqlHelper.ExecuteScalarAsync(conStr, commandText, CommandType.Text, parameterUsername);
+            Object oValue = await SqlHelper.ExecuteScalarAsync(conStr, commandText, CommandType.Text, user_name);
             Int32 count;
             if (Int32.TryParse(oValue.ToString(), out count))
                 return count > 0 ? true : false;
@@ -36,18 +36,16 @@ namespace Infrastructure.Security
             return false;
         }
 
-        public async Task<GoodFoodUser> Register(string username, string password)
+        public async Task<GoodFoodUser> Register(string userName, string password)
         {
-            if (await IsUserExits(username))
-                throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
 
             byte[] passwordHash, passwordSalt;
             CreatePasswordHash(password, out passwordHash, out passwordSalt);
 
-            string insertCommandText = @"INSERT INTO [dbo].[goodfooduser] (user_name, user_password, user_password_salt)
-                values (@user_Name,@passwordHash,@passwordSalt)";
+            string insertCommandText = @"INSERT INTO GoodFoodUser (UserName, UserPassword, UserPasswordSalt)
+                values (@userName,@passwordHash,@passwordSalt)";
 
-            SqlParameter user_name = new SqlParameter("@user_Name", username);
+            SqlParameter user_name = new SqlParameter("@userName", userName);
             SqlParameter user_password = new SqlParameter("@passwordHash", passwordHash);
             SqlParameter user_password_salt = new SqlParameter("@passwordSalt", passwordSalt);
 
@@ -62,7 +60,7 @@ namespace Infrastructure.Security
             {
                 var user = new GoodFoodUser
                 {
-                    Username = username
+                    Username = userName
                 };
                 return user;
             }
@@ -73,16 +71,16 @@ namespace Infrastructure.Security
         public async Task<List<GoodFoodUserDto>> GetAllUser()
         {
             List<GoodFoodUserDto> allusers = new List<GoodFoodUserDto>();
+            string selectCommandText = @"SELECT UserName FROM GoodFoodUser";
 
-            string selectCommandText = "dbo.getAllUsernames";
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure))
+                CommandType.Text))
             {
                 while (reader.Read())
                 {
                     var user = new GoodFoodUserDto
                     {
-                        Username = reader["user_name"].ToString()
+                        UserName = reader["UserName"].ToString()
                     };
 
                     allusers.Add(user);
@@ -92,50 +90,51 @@ namespace Infrastructure.Security
             return allusers;
         }
 
-        public async Task<GoodFoodUser> GetUser(string username)
+        public async Task<GoodFoodUser> GetUser(string userName)
         {
             var user = new GoodFoodUser();
             bool isUserExist = false;
-            string selectCommandText = "dbo.getUser";
-            SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
-            user_name.Value = username;
+            string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
+            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+            user_name.Value = userName;
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, user_name))
+                CommandType.Text, user_name))
             {
                 while (reader.Read())
                 {
                     isUserExist = true;
-                    user.Username = (string)reader["user_name"];
-                    user.Password = (byte[])reader["user_password"];
-                    user.PasswordSalt = (byte[])reader["user_password_salt"];
-                    user.Id = (int)reader["user_id"];
+                    user.Username = (string)reader["UserName"];
+                    user.Password = (byte[])reader["UserPassword"];
+                    user.PasswordSalt = (byte[])reader["UserPasswordSalt"];
+                    user.Id = (int)reader["UserId"];
                 }
                 await reader.CloseAsync();
             }
             return isUserExist ? user : null;
         }
-        public async Task<GoodFoodUser> VerifyUser(string username, string password)
+        public async Task<GoodFoodUser> VerifyUser(string userName, string password)
         {
-            string selectCommandText = "dbo.getUser";
-            SqlParameter user_name = new SqlParameter("@username", SqlDbType.VarChar);
-            user_name.Value = username;
+            string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
+            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+            user_name.Value = userName;
+
             var userFromDB = new GoodFoodUser();
             bool isUserInDb = false;
 
             using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.StoredProcedure, user_name))
+                CommandType.Text, user_name))
             {
                 while (reader.Read())
                 {
                     isUserInDb = true;
 
-                    var pass = reader["user_password"];
-                    var salt = reader["user_password_salt"];
+                    var pass = reader["UserPassword"];
+                    var salt = reader["UserPasswordSalt"];
 
                     if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
                         throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                    userFromDB.Username = reader["user_name"].ToString();
+                    userFromDB.Username = reader["UserName"].ToString();
                 }
                 await reader.CloseAsync();
             }
@@ -152,7 +151,7 @@ namespace Infrastructure.Security
                 }
             }
             return true;
-        }       
+        }
 
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {

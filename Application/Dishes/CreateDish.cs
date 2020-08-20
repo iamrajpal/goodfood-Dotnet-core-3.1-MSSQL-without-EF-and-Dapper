@@ -3,59 +3,67 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.Dtos;
 using Application.Errors;
 using Application.Interfaces;
 using Domain.Entities;
-using Domain.Enums;
 using MediatR;
 
-namespace Application.Recipies
+namespace Application.Dishes
 {
-    public class CreateRecipe
+    public class CreateDish
     {
         public class Ingredients
         {
             public int IngredientId { get; set; }
             public string Amount { get; set; }
         }
-        public class CreateRecipeCommand : IRequest
+        public class CreateDishCommand : IRequest
         {
             public string Title { get; set; }
             public string Description { get; set; }
             public string SlugUrl { get; set; }
-            public RecipeCategory Category { get; set; }
+            public int DishCategoryId { get; set; }
             public string Username { get; set; }
             public List<Ingredients> Ingredients { get; set; }
         }
-        public class Handler : IRequestHandler<CreateRecipeCommand>
+        public class Handler : IRequestHandler<CreateDishCommand>
         {
             private readonly IUserAuth _userAuth;
-            private readonly IRecipeGenerator _recipeGenerator;
+            private readonly IDishCategory _dishCategory;
+            private readonly IDishGenerator _dishGenerator;
             private readonly IIngredientGenerator _ingredientGenerator;
             private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
 
             public Handler(
                 IUserAuth userAuth,
-                IRecipeGenerator recipeGenerator,
+                IDishCategory dishCategory,
+                IDishGenerator dishGenerator,
                 IIngredientGenerator ingredientGenerator,
                 IRecipeIngredientGenerator recipeIngredientGenerator)
             {
                 _ingredientGenerator = ingredientGenerator;
                 _recipeIngredientGenerator = recipeIngredientGenerator;
-                _recipeGenerator = recipeGenerator;
+                _dishGenerator = dishGenerator;
                 _userAuth = userAuth;
+                _dishCategory = dishCategory;
             }
 
-            public async Task<Unit> Handle(CreateRecipeCommand request,
+            public async Task<Unit> Handle(CreateDishCommand request,
                 CancellationToken cancellationToken)
             {
                 var user = await _userAuth.GetUser(request.Username);
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                if (await _recipeGenerator.IsRecipeExitsWithSlug(user.Id, request.SlugUrl))
-                    throw new RestException(HttpStatusCode.BadRequest, new { Recipe_Slug = "Already exist" });
+                var dishCategory = await _dishCategory.GetDishCategory(request.DishCategoryId, user.Id);
+                if (dishCategory == null)
+                    throw new RestException(HttpStatusCode.NotFound, new { DishCategory = "Not found" });
+
+                if (await _dishGenerator.IsDishExitsWithSlug(user.Id, request.SlugUrl))
+                    throw new RestException(HttpStatusCode.BadRequest, new { Dish_Slug = "Already exist" });
+
+                if (await _dishGenerator.IsDishExits(request.Title, user.Id))
+                    throw new RestException(HttpStatusCode.BadRequest, new { DishTitle = "Already exist" });
 
                 bool haveIngredients = false;
                 if (request.Ingredients != null && request.Ingredients.Count > 0)
@@ -67,29 +75,29 @@ namespace Application.Recipies
                             throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
                     }
                 }
-                var toCreateRecipe = new Recipe
+                var toCreateDish = new Dish
                 {
                     Title = request.Title,
                     Description = request.Description,
                     SlugUrl = request.SlugUrl,
-                    Category = request.Category,
+                    DishCategoryId = request.DishCategoryId,
                 };
 
-                var createdRecipe = await _recipeGenerator.Create(user.Id, toCreateRecipe);
+                var createdDish = await _dishGenerator.Create(user.Id, toCreateDish);
 
                 if (haveIngredients)
                 {
                     foreach (var ingredient in request.Ingredients)
                     {
-                        bool recipeIngredient = await _recipeIngredientGenerator.Create(createdRecipe.Id, ingredient.IngredientId, ingredient.Amount);
-                        if (!recipeIngredient)
-                            throw new Exception("Problem adding recipe_Ingredients");
+                        bool dishIngredient = await _recipeIngredientGenerator.Create(createdDish.Id, ingredient.IngredientId, ingredient.Amount);
+                        if (!dishIngredient)
+                            throw new Exception("Problem adding Dish Ingredients");
                     }
                 }
 
                 return Unit.Value;
 
-                throw new Exception("Problem creating recipe");
+                throw new Exception("Problem creating dish");
             }
         }
     }

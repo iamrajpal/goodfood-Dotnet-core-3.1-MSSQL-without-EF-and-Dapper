@@ -7,12 +7,11 @@ using Application.Dtos;
 using Application.Errors;
 using Application.Interfaces;
 using Domain.Entities;
-using Domain.Enums;
 using MediatR;
 
-namespace Application.Recipies
+namespace Application.Dishes
 {
-    public class UpdateRecipe
+    public class UpdateDish
     {
 
         public class UpdateIngredients
@@ -25,44 +24,54 @@ namespace Application.Recipies
             public bool IsNewIngredient { get; set; }
 
         }
-        public class UpdateRecipeCommand : IRequest
+        public class UpdateDishCommand : IRequest
         {
-            public int RecipeId { get; set; }
+            public int DishId { get; set; }
             public string Title { get; set; }
             public string Description { get; set; }
-            public RecipeCategory Category { get; set; }
+            public int DishCategoryId { get; set; }
             public string Username { get; set; }
             public List<UpdateIngredients> UpdateIngredients { get; set; }
         }
-        public class Handler : IRequestHandler<UpdateRecipeCommand>
+        public class Handler : IRequestHandler<UpdateDishCommand>
         {
+            private readonly IDishCategory _dishCategory;
             private readonly IUserAuth _userAuth;
-            private readonly IRecipeGenerator _recipeGenerator;
+            private readonly IDishGenerator _dishGenerator;
             private readonly IIngredientGenerator _ingredientGenerator;
             private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
 
             public Handler(
+                IDishCategory dishCategory,
                 IUserAuth userAuth,
-                IRecipeGenerator recipeGenerator,
+                IDishGenerator dishGenerator,
                 IIngredientGenerator ingredientGenerator,
                 IRecipeIngredientGenerator recipeIngredientGenerator)
             {
                 _recipeIngredientGenerator = recipeIngredientGenerator;
                 _ingredientGenerator = ingredientGenerator;
-                _recipeGenerator = recipeGenerator;
+                _dishGenerator = dishGenerator;
+                _dishCategory = dishCategory;
                 _userAuth = userAuth;
             }
 
-            public async Task<Unit> Handle(UpdateRecipeCommand request,
+            public async Task<Unit> Handle(UpdateDishCommand request,
                 CancellationToken cancellationToken)
             {
                 var user = await _userAuth.GetUser(request.Username);
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                var recipe = await _recipeGenerator.GetRecipe(request.RecipeId, user.Id);
-                if (recipe == null)
-                    throw new RestException(HttpStatusCode.NotFound, new { Recipe = "Not found" });
+                var dishCategory = await _dishCategory.GetDishCategory(request.DishCategoryId, user.Id);
+                if (dishCategory == null)
+                    throw new RestException(HttpStatusCode.NotFound, new { DishCategory = "Not found" });
+
+                var dish = await _dishGenerator.GetDish(request.DishId, user.Id);
+                if (dish == null)
+                    throw new RestException(HttpStatusCode.NotFound, new { Dish = "Not found" });
+
+                if (await _dishGenerator.IsDishExits(request.Title, user.Id))
+                    throw new RestException(HttpStatusCode.BadRequest, new { DishTitle = "Already exist" });
 
                 bool haveIngredient = false;
                 if (request.UpdateIngredients != null && request.UpdateIngredients.Count > 0)
@@ -79,21 +88,21 @@ namespace Application.Recipies
                         {
                             if (!await _ingredientGenerator.IsIngredientExitById(test.IngredientId, user.Id))
                                 throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
-                            //to check right combination of Ingredient and recipe
-                            if (!await _recipeIngredientGenerator.IsIdsExitInRecipeIngredient(test.IngredientId, request.RecipeId))
-                                throw new RestException(HttpStatusCode.NotFound, new { RecipeIngredient = "Not exist" });
+                            //to check right combination of Ingredient and Dish
+                            if (!await _recipeIngredientGenerator.IsIdsExitInRecipeIngredient(test.IngredientId, request.DishId))
+                                throw new RestException(HttpStatusCode.NotFound, new { DishIngredient = "Not exist" });
                         }
                     }
                 }
 
-                var updateRecipe = new Recipe
+                var updateDish = new Dish
                 {
-                    Title = request.Title ?? recipe.Title,
-                    Description = request.Description ?? recipe.Description,
-                    Category = request.Category,
+                    Title = request.Title ?? dish.Title,
+                    Description = request.Description ?? dish.Description,
+                    DishCategoryId = request.DishCategoryId,
                 };
 
-                var success = await _recipeGenerator.Update(user.Id, request.RecipeId, updateRecipe);
+                var success = await _dishGenerator.Update(user.Id, request.DishId, updateDish);
                 if (!success) throw new Exception("Problem saving changes");
 
                 if (haveIngredient)
@@ -112,9 +121,9 @@ namespace Application.Recipies
 
                             ingredientIdentityId = await _ingredientGenerator.Create(user.Id, createIngredient);
 
-                            bool recipeIngredient = await _recipeIngredientGenerator.Create(request.RecipeId, ingredientIdentityId, updateIngredient.Amount);
+                            bool recipeIngredient = await _recipeIngredientGenerator.Create(request.DishId, ingredientIdentityId, updateIngredient.Amount);
                             if (!recipeIngredient)
-                                throw new Exception("Problem creating recipe ingredient list");
+                                throw new Exception("Problem creating dish ingredient list");
                         }
                         else
                         {
@@ -131,11 +140,10 @@ namespace Application.Recipies
                                 if (ingredientIdentityId <= 0) throw new Exception("Problem saving changes ingredients");
                             }
 
-
                             if (!string.IsNullOrWhiteSpace(updateIngredient.Amount))
                             {
-                                var newMeasurementResult = await _recipeIngredientGenerator.Update(request.RecipeId, updateIngredient.IngredientId, updateIngredient.Amount);
-                                if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new recipe list");
+                                var newMeasurementResult = await _recipeIngredientGenerator.Update(request.DishId, updateIngredient.IngredientId, updateIngredient.Amount);
+                                if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new dish list");
                             }
                         }
                     }

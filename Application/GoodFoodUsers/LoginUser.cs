@@ -31,7 +31,7 @@ namespace Application.GoodFoodUsers
                 CancellationToken cancellationToken)
             {
                 if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
-                    throw new RestException(HttpStatusCode.BadRequest, new { User_Password = "Required" });
+                    throw new RestException(HttpStatusCode.BadRequest, new { UserPassword = "Required" });
 
                 var userFromDB = await _userAuth.VerifyUser(request.Username, request.Password);
 
@@ -40,7 +40,7 @@ namespace Application.GoodFoodUsers
 
                 var user = new GoodFoodUserDto
                 {
-                    Username = userFromDB.Username,
+                    UserName = userFromDB.Username,
                     Token = _jwtGenerator.CreateToken(userFromDB)
                 };
 

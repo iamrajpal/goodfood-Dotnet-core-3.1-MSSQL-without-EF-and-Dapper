@@ -60,7 +60,8 @@ namespace API
             services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
-            services.AddScoped<IRecipeGenerator, RecipeGenerator>();
+            services.AddScoped<IDishCategory, DishCategoryRepo>();
+            services.AddScoped<IDishGenerator, DishGenerator>();
             services.AddScoped<IIngredientGenerator, IngredientGenerator>();
             services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
 
