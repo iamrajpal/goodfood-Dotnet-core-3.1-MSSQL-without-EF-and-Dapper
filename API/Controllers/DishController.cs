@@ -11,23 +11,20 @@ namespace API.Controllers
     [Authorize]
     public class DishController : BaseController
     {
-        [HttpPost("{username}/create")]
-        public async Task<ActionResult<Unit>> Create(string username, CreateDish.CreateDishCommand command)
+        [HttpPost("create")]
+        public async Task<ActionResult<Unit>> Create(CreateDish.CreateDishCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
 
-        [HttpPut("{username}/edit")]
-        public async Task<ActionResult<Unit>> Edit(string username, UpdateDish.UpdateDishCommand command)
+        [HttpPut("edit")]
+        public async Task<ActionResult<Unit>> Edit(UpdateDish.UpdateDishCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpDelete("{username}/delete")]
-        public async Task<ActionResult<Unit>> Delete(string username, DeleteDish.DeleteDishCommand command)
+        [HttpDelete("delete")]
+        public async Task<ActionResult<Unit>> Delete(DeleteDish.DeleteDishCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
         [HttpGet("list")]
@@ -35,6 +32,11 @@ namespace API.Controllers
             int? offset)
         {
             return await Mediator.Send(new GetDishes.GetDishesQuery(username, limit, offset));
+        }
+        [HttpPut("addIngredients")]
+        public async Task<ActionResult<Unit>> AddIngredients(AddIngredient.AddIngredientCommand command)
+        {
+            return await Mediator.Send(command);
         }
 
     }

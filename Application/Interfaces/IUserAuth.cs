@@ -12,5 +12,6 @@ namespace Application.Interfaces
         Task<List<GoodFoodUserDto>> GetAllUser();
         Task<GoodFoodUser> GetUser(string username);
         Task<GoodFoodUser> VerifyUser(string username, string password);
+        Task<GoodFoodUser> GetCurrentUser();
     }
 }

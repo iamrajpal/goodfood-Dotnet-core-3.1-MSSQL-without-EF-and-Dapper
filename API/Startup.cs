@@ -13,6 +13,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System;
+using FluentValidation.AspNetCore;
+using API.Extensions;
 
 namespace API
 {
@@ -37,9 +39,18 @@ namespace API
                     .WithOrigins("http://localhost:3000", "http://localhost:5000").AllowCredentials();
                 });
             });
+
+            
+            services.AddSwaggerExtension();
+            services.AddApiVersioningExtension();
+
             services.AddMediatR(typeof(GetAllUser.Handler).Assembly);
 
-            services.AddControllers();
+            services.AddControllers()
+                .AddFluentValidation(cfg =>
+                {
+                    cfg.RegisterValidatorsFromAssemblyContaining<Application.DishCategories.CreateDishCategory>();
+                });
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["TokenKey"]));
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -57,13 +68,15 @@ namespace API
                 });
 
 
+
             services.AddScoped<IJwtGenerator, JwtGenerator>();
-            services.AddScoped<IConnectionString, GetDBConnectionString>();
+            services.AddSingleton<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
             services.AddScoped<IDishCategory, DishCategoryRepo>();
-            services.AddScoped<IDishGenerator, DishGenerator>();
-            services.AddScoped<IIngredientGenerator, IngredientGenerator>();
-            services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
+            services.AddScoped<IDish, DishRepo>();
+            services.AddScoped<IIngredient, IngredientRepo>();
+            services.AddScoped<IRecipe, RecipeRepo>();
+            services.AddScoped<IUserAccessor, UserAccessor>();
 
             string conStr = Configuration.GetConnectionString("DefaultConnection");
             GenerateDB(conStr);
@@ -96,6 +109,7 @@ namespace API
             app.UseCors("CorsPolicy");
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseSwaggerExtension();
 
             app.UseEndpoints(endpoints =>
             {

@@ -11,29 +11,26 @@ namespace API.Controllers
     [Authorize]
     public class DishCategoryController : BaseController
     {
-        [HttpPost("{username}/create")]
-        public async Task<ActionResult<Unit>> Create(string username, CreateDishCategory.CreateDishCategoryCommand command)
+        [HttpPost("create")]
+        public async Task<ActionResult<Unit>> Create(CreateDishCategory.CreateDishCategoryCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
 
-        [HttpPut("{username}/edit")]
-        public async Task<ActionResult<Unit>> Edit(string username, UpdateDishCategory.UpdateDishCategoryCommand command)
+        [HttpPut("edit")]
+        public async Task<ActionResult<Unit>> Edit(UpdateDishCategory.UpdateDishCategoryCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpDelete("{username}/delete")]
-        public async Task<ActionResult<Unit>> Delete(string username, DeleteDishCategory.DeleteDishCategoryCommand command)
+        [HttpDelete("delete")]
+        public async Task<ActionResult<Unit>> Delete(DeleteDishCategory.DeleteDishCategoryCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpGet("{username}/list")]
+        [HttpGet("list")]
         public async Task<ActionResult<List<DishCategory>>> List(string username)
         {
-            return await Mediator.Send(new GetDishCategories.GetDishCategoriesQuery { Username = username });
+            return await Mediator.Send(new GetDishCategories.GetDishCategoriesQuery());
         }
 
     }

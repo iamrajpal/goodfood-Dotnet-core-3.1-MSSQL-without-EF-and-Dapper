@@ -14,16 +14,15 @@ namespace Application.DishCategories
         public class DeleteDishCategoryCommand : IRequest
         {
             public int DishCategoryId { get; set; }
-            public string Username { get; set; }
         }
         public class Handler : IRequestHandler<DeleteDishCategoryCommand>
         {
             private readonly IUserAuth _userAuth;
             private readonly IDishCategory _dishCategory;
-            private readonly IDishGenerator _dishGenerator;
-            public Handler(IUserAuth userAuth, IDishCategory dishCategory, IDishGenerator dishGenerator)
+            private readonly IDish _dish;
+            public Handler(IUserAuth userAuth, IDishCategory dishCategory, IDish dish)
             {
-                _dishGenerator = dishGenerator;
+                _dish = dish;
                 _dishCategory = dishCategory;
                 _userAuth = userAuth;
             }
@@ -31,7 +30,7 @@ namespace Application.DishCategories
             public async Task<Unit> Handle(DeleteDishCategoryCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
@@ -39,7 +38,7 @@ namespace Application.DishCategories
                 if (dishCategory == null)
                     throw new RestException(HttpStatusCode.NotFound, new { DishCategory = "Not found" });
 
-                if (await _dishGenerator.IsDishCategoryUsedByDish(request.DishCategoryId))
+                if (await _dish.IsDishCategoryUsedByDish(request.DishCategoryId))
                     throw new RestException(HttpStatusCode.BadRequest, new { DishCategory = "Used by dish" });
 
                 var success = await _dishCategory.Delete(user.Id, request.DishCategoryId);

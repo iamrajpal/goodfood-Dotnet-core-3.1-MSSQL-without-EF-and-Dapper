@@ -12,9 +12,7 @@ namespace Application.DishCategories
     public class GetDishCategories
     {
         public class GetDishCategoriesQuery : IRequest<List<DishCategory>>
-        {
-            public string Username { get; set; }           
-        }
+        { }
         public class Handler : IRequestHandler<GetDishCategoriesQuery, List<DishCategory>>
         {
             private readonly IUserAuth _userAuth;
@@ -29,7 +27,7 @@ namespace Application.DishCategories
                 CancellationToken cancellationToken)
             {
 
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.NotFound, new { User = "Not found" });
 

@@ -16,26 +16,25 @@ namespace Application.Ingredient
             public int IngredientId { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
-            public string Username { get; set; }
         }
         public class Handler : IRequestHandler<UpdateIngredientCommand>
         {
             private readonly IUserAuth _userAuth;
-            private readonly IIngredientGenerator _ingredientGenerator;
-            public Handler(IUserAuth userAuth, IIngredientGenerator ingredientGenerator)
+            private readonly IIngredient _ingredient;
+            public Handler(IUserAuth userAuth, IIngredient ingredient)
             {
-                _ingredientGenerator = ingredientGenerator;
+                _ingredient = ingredient;
                 _userAuth = userAuth;
             }
 
             public async Task<Unit> Handle(UpdateIngredientCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                var ingredient = await _ingredientGenerator.GetIngredient(user.Id, request.IngredientId);
+                var ingredient = await _ingredient.GetIngredient(user.Id, request.IngredientId);
                 if (ingredient == null)
                     throw new RestException(HttpStatusCode.NotFound, new { Ingredent = "Not found" });
 
@@ -45,7 +44,7 @@ namespace Application.Ingredient
                     Description = request.Description ?? ingredient.Description
                 };
 
-                var success = await _ingredientGenerator.Update(user.Id, request.IngredientId, updateIngredent);
+                var success = await _ingredient.Update(user.Id, request.IngredientId, updateIngredent);
                 if (success > 0) return Unit.Value;
 
                 throw new Exception("Problem saving changes");

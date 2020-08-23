@@ -14,6 +14,7 @@ namespace Domain.Entities
         public string Description { get; set; }
         public string SlugUrl { get; set; }
         public int DishCategoryId { get; set; } 
+        public string DishCategoryTitle { get; set; }
         public ICollection<Ingredients> Ingredients { get; set; }
     }
 }

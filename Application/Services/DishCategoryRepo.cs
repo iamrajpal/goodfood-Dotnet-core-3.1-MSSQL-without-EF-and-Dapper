@@ -22,7 +22,9 @@ namespace Application.Services
         }
         public async Task<bool> Create(int userId, DishCategory dishCategory)
         {
-            string insertCommandText = @"INSERT 
+            try
+            {
+                string insertCommandText = @"INSERT 
                 INTO 
                     DishCategory(DishCategoryTitle, UserId)
                 OUTPUT 
@@ -30,147 +32,188 @@ namespace Application.Services
                 values 
                     (@dishCategoryTitle, @userId)";
 
-            SqlParameter dish_title = new SqlParameter("@dishCategoryTitle", dishCategory.Title);
-            SqlParameter user_id = new SqlParameter("@userId", userId);
+                SqlParameter dish_title = new SqlParameter("@dishCategoryTitle", dishCategory.Title);
+                SqlParameter user_id = new SqlParameter("@userId", userId);
 
-            var identityId = await SqlHelper.ExecuteScalarAsync(conStr, insertCommandText, CommandType.Text,
-                dish_title, user_id);
+                var identityId = await SqlHelper.ExecuteScalarAsync(conStr, insertCommandText, CommandType.Text,
+                    dish_title, user_id);
 
-            if (identityId != null)
+                if (identityId != null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception)
             {
-                return true;
+                throw new Exception("Problem creating dish category");
             }
 
-            return false;
-
-            throw new Exception("Problem creating dish category");
         }
 
         public async Task<bool> Delete(int userId, int dishCategorId)
         {
-            bool checkDeleteStatus = false;
+            try
+            {
+                string deleteCommandText = @"DELETE 
+                FROM
+                    DishCategory
+                WHERE 
+                    UserId = @userId AND DishCategoryId = @dishCategoryId";
 
-            string deleteCommandText = @"DELETE 
-                    FROM
-                        DishCategory
-                    WHERE 
-                        UserId = @userId AND DishCategoryId = @dishCategoryId";
+                SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", dishCategorId);
+                SqlParameter user_id = new SqlParameter("@userId", userId);
 
-            SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", dishCategorId);
-            SqlParameter user_id = new SqlParameter("@userId", userId);
+                Int32 rows = await SqlHelper
+                    .ExecuteNonQueryAsync(conStr, deleteCommandText, CommandType.Text, dish_category_id, user_id);
 
-            Int32 rows = await SqlHelper
-                .ExecuteNonQueryAsync(conStr, deleteCommandText, CommandType.Text, dish_category_id, user_id);
+                if (rows >= 1) return true;
 
-            if (rows >= 1) checkDeleteStatus = true;
-
-            return checkDeleteStatus;
+                return false;
+            }
+            catch (System.Exception)
+            {
+                throw new Exception("Problem deleting dish category");
+            }
         }
 
         public async Task<List<DishCategory>> GetDishCategories(int userId)
         {
-            List<DishCategory> dishCategories = new List<DishCategory>();
-            // bool isDishExist = false;
-            string selectCommandText = @"SELECT 
+            try
+            {
+                List<DishCategory> dishCategories = new List<DishCategory>();
+                string selectCommandText = @"SELECT 
                     *
                 FROM
                     DishCategory
                 WHERE
                     UserId=@userId";
 
-            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
-            user_id.Value = userId;
-            
-            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.Text, user_id))
-            {
-                while (reader.Read())
+                SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+                user_id.Value = userId;
+
+                using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                    CommandType.Text, user_id))
                 {
-                    var dishCategory = new DishCategory();
-                    dishCategory.Id =  (int)reader["DishCategoryId"];
-                    dishCategory.Title = (string)reader["DishCategoryTitle"];
-                    dishCategories.Add(dishCategory);
+                    while (reader.Read())
+                    {
+                        var dishCategory = new DishCategory();
+                        dishCategory.Id = (int)reader["DishCategoryId"];
+                        dishCategory.Title = (string)reader["DishCategoryTitle"];
+                        dishCategories.Add(dishCategory);
+                    }
+                    await reader.CloseAsync();
                 }
-                await reader.CloseAsync();
+                return dishCategories;
             }
-            return dishCategories;
+            catch (Exception)
+            {
+                throw new Exception("Problem getting dish categories");
+            }
+
         }
 
         public async Task<DishCategory> GetDishCategory(int dishCategoryId, int userId)
         {
-            var dishCategory = new DishCategory();
-            bool isDishExist = false;
-            string selectCommandText = @"SELECT 
+            try
+            {
+                var dishCategory = new DishCategory();
+                bool isDishExist = false;
+                string selectCommandText = @"SELECT 
                     *
                 FROM
                     DishCategory
                 WHERE
                     UserId=@userId ANd DishCategoryId=@dishCategoryId";
 
-            SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
-            user_id.Value = userId;
-            SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", SqlDbType.Int);
-            dish_category_id.Value = dishCategoryId;
+                SqlParameter user_id = new SqlParameter("@userId", SqlDbType.Int);
+                user_id.Value = userId;
+                SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", SqlDbType.Int);
+                dish_category_id.Value = dishCategoryId;
 
-            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.Text, user_id, dish_category_id))
-            {
-                while (reader.Read())
+                using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                    CommandType.Text, user_id, dish_category_id))
                 {
-                    isDishExist = true;
-                    dishCategory.Title = (string)reader["DishCategoryTitle"];
+                    while (reader.Read())
+                    {
+                        isDishExist = true;
+                        dishCategory.Title = (string)reader["DishCategoryTitle"];
+                    }
+                    await reader.CloseAsync();
                 }
-                await reader.CloseAsync();
+                return isDishExist ? dishCategory : null;
             }
-            return isDishExist ? dishCategory : null;
+            catch (System.Exception)
+            {
+                throw new Exception("Problem getting dish category");
+            }
+
         }
 
         public async Task<bool> IsDishCategoryExits(string dishCategoryTitle, int userId)
         {
-            string selectCommandText = @"SELECT Count([DishCategoryTitle]) 
+            try
+            {
+                string selectCommandText = @"SELECT Count([DishCategoryTitle]) 
                 FROM 
                     DishCategory 
                 WHERE 
                     DishCategoryTitle=@dishCategoryTitle AND UserId=@userId";
 
-            SqlParameter dish_category_title = new SqlParameter("@dishCategoryTitle", SqlDbType.VarChar);
-            dish_category_title.Value = dishCategoryTitle;
-            SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
-            user_Id.Value = userId;
+                SqlParameter dish_category_title = new SqlParameter("@dishCategoryTitle", SqlDbType.VarChar);
+                dish_category_title.Value = dishCategoryTitle;
+                SqlParameter user_Id = new SqlParameter("@userId", SqlDbType.Int);
+                user_Id.Value = userId;
 
-            Object oValue = await SqlHelper.ExecuteScalarAsync(
-                conStr,
-                selectCommandText,
-                CommandType.Text,
-                dish_category_title,
-                user_Id);
+                Object oValue = await SqlHelper.ExecuteScalarAsync(
+                    conStr,
+                    selectCommandText,
+                    CommandType.Text,
+                    dish_category_title,
+                    user_Id);
 
-            Int32 count;
-            if (Int32.TryParse(oValue.ToString(), out count))
-                return count > 0 ? true : false;
+                Int32 count;
+                if (Int32.TryParse(oValue.ToString(), out count))
+                    return count > 0 ? true : false;
 
-            return false;
+                return false;
+            }
+            catch (System.Exception)
+            {
+                throw new Exception("Error to connected with DB");
+            }
+
         }
 
         public async Task<bool> Update(int userId, int dishCategoryId, DishCategory dishCategory)
         {
-            string updateCommandText = @"UPDATE 
+            try
+            {
+                string updateCommandText = @"UPDATE 
                     DishCategory 
                 SET 
                     DishCategoryTitle = @dishCategoryTitle 
                 WHERE 
                     DishCategoryId = @dishCategoryId AND UserId = @userId";
 
-            SqlParameter dish_title = new SqlParameter("@dishcategoryTitle", dishCategory.Title);
-            SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", dishCategoryId);
-            SqlParameter user_id = new SqlParameter("@userId", userId);
+                SqlParameter dish_title = new SqlParameter("@dishcategoryTitle", dishCategory.Title);
+                SqlParameter dish_category_id = new SqlParameter("@dishCategoryId", dishCategoryId);
+                SqlParameter user_id = new SqlParameter("@userId", userId);
 
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
-                dish_title, dish_category_id, user_id);
+                Int32 rows = await SqlHelper.ExecuteNonQueryAsync(conStr, updateCommandText, CommandType.Text,
+                    dish_title, dish_category_id, user_id);
 
-            if (rows >= 1) return true;
+                if (rows >= 1) return true;
 
-            return false;
+                return false;
+
+            }
+            catch (Exception)
+            {
+                throw new Exception("Error to update dish category");
+            }
+
         }
     }
 }

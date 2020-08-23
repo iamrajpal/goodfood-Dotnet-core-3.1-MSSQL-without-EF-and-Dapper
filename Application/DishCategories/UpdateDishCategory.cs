@@ -16,7 +16,6 @@ namespace Application.DishCategories
         {
             public int DishCategoryId { get; set; }
             public string Title { get; set; }
-            public string Username { get; set; }
         }
         public class Handler : IRequestHandler<UpdateDishCategoryCommand>
         {
@@ -34,7 +33,7 @@ namespace Application.DishCategories
             public async Task<Unit> Handle(UpdateDishCategoryCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 

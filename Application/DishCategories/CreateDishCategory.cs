@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Application.Errors;
 using Application.Interfaces;
 using Domain.Entities;
+using FluentValidation;
 using MediatR;
 
 namespace Application.DishCategories
@@ -14,8 +15,13 @@ namespace Application.DishCategories
         public class CreateDishCategoryCommand : IRequest
         {
             public string Title { get; set; }
-            public string Username { get; set; }
-
+        }
+         public class CommandValidator : AbstractValidator<CreateDishCategoryCommand>
+        {
+            public CommandValidator()
+            {
+                RuleFor(x => x.Title).NotEmpty();
+            }
         }
         public class Handler : IRequestHandler<CreateDishCategoryCommand>
         {
@@ -33,7 +39,7 @@ namespace Application.DishCategories
             public async Task<Unit> Handle(CreateDishCategoryCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 

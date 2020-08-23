@@ -11,28 +11,26 @@ namespace API.Controllers
     [Authorize]
     public class IngredientController : BaseController
     {
-        [HttpPost("{username}/create")]
+        [HttpPost("create")]
         [Authorize]
-        public async Task<ActionResult<Unit>> Create(string username, CreateIngredient.CreateIngredientCommand command)
+        public async Task<ActionResult<Unit>> Create(CreateIngredient.CreateIngredientCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpGet("{username}/get")]
-        public async Task<ActionResult<List<IngredientDto>>> Get(string username)
+        [HttpGet("get")]
+        public async Task<ActionResult<List<IngredientDto>>> Get()
         {
-            return await Mediator.Send(new GetIngredients.GetIngredientsQuery { Username = username });
+            return await Mediator.Send(new GetIngredients.GetIngredientsQuery());
         }
-        [HttpPut("{username}/edit")]
-        public async Task<ActionResult<Unit>> Edit(string username, UpdateIngredient.UpdateIngredientCommand command)
+        [HttpPut("edit")]
+        public async Task<ActionResult<Unit>> Edit(UpdateIngredient.UpdateIngredientCommand command)
         {
-            command.Username = username;
             return await Mediator.Send(command);
         }
-        [HttpDelete("{username}/user/{ingredientId}/delete")]
-        public async Task<ActionResult<Unit>> Delete(string username, int ingredientId)
+        [HttpDelete("{ingredientId}/delete")]
+        public async Task<ActionResult<Unit>> Delete(int ingredientId)
         {
-            return await Mediator.Send(new DeleteIngredient.DeleteIngredientCommand { Username = username, IngredientId = ingredientId });
+            return await Mediator.Send(new DeleteIngredient.DeleteIngredientCommand { IngredientId = ingredientId });
         }
     }
 }

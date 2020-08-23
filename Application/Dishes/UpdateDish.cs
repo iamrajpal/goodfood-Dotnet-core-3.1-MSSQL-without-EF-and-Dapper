@@ -21,8 +21,6 @@ namespace Application.Dishes
             public string Description { get; set; }
             public string SlugUrl { get; set; }
             public string Amount { get; set; }
-            public bool IsNewIngredient { get; set; }
-
         }
         public class UpdateDishCommand : IRequest
         {
@@ -30,27 +28,27 @@ namespace Application.Dishes
             public string Title { get; set; }
             public string Description { get; set; }
             public int DishCategoryId { get; set; }
-            public string Username { get; set; }
             public List<UpdateIngredients> UpdateIngredients { get; set; }
         }
         public class Handler : IRequestHandler<UpdateDishCommand>
         {
             private readonly IDishCategory _dishCategory;
             private readonly IUserAuth _userAuth;
-            private readonly IDishGenerator _dishGenerator;
-            private readonly IIngredientGenerator _ingredientGenerator;
-            private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
+            private readonly IDish _dish;
+            private readonly IIngredient _ingredient;
+            private readonly IRecipe _recipe;
 
             public Handler(
                 IDishCategory dishCategory,
                 IUserAuth userAuth,
-                IDishGenerator dishGenerator,
-                IIngredientGenerator ingredientGenerator,
-                IRecipeIngredientGenerator recipeIngredientGenerator)
+                IDish dish,
+                IIngredient ingredient,
+                IRecipe recipe)
             {
-                _recipeIngredientGenerator = recipeIngredientGenerator;
-                _ingredientGenerator = ingredientGenerator;
-                _dishGenerator = dishGenerator;
+                ;
+                _ingredient = ingredient;
+                _recipe = recipe;
+                _dish = dish;
                 _dishCategory = dishCategory;
                 _userAuth = userAuth;
             }
@@ -58,7 +56,7 @@ namespace Application.Dishes
             public async Task<Unit> Handle(UpdateDishCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
@@ -66,11 +64,11 @@ namespace Application.Dishes
                 if (dishCategory == null)
                     throw new RestException(HttpStatusCode.NotFound, new { DishCategory = "Not found" });
 
-                var dish = await _dishGenerator.GetDish(request.DishId, user.Id);
+                var dish = await _dish.GetDish(request.DishId, user.Id);
                 if (dish == null)
                     throw new RestException(HttpStatusCode.NotFound, new { Dish = "Not found" });
 
-                if (await _dishGenerator.IsDishExits(request.Title, user.Id))
+                if (await _dish.IsDishExitsWithTitle(request.Title, user.Id))
                     throw new RestException(HttpStatusCode.BadRequest, new { DishTitle = "Already exist" });
 
                 bool haveIngredient = false;
@@ -79,19 +77,13 @@ namespace Application.Dishes
                     haveIngredient = true;
                     foreach (var test in request.UpdateIngredients)
                     {
-                        if (test.IsNewIngredient)
-                        {
-                            if (await _ingredientGenerator.IsIngredientExitByName(test.Name, user.Id, test.SlugUrl))
-                                throw new RestException(HttpStatusCode.BadRequest, new { Ingredient_slug = "Already exist" });
-                        }
-                        else
-                        {
-                            if (!await _ingredientGenerator.IsIngredientExitById(test.IngredientId, user.Id))
-                                throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
-                            //to check right combination of Ingredient and Dish
-                            if (!await _recipeIngredientGenerator.IsIdsExitInRecipeIngredient(test.IngredientId, request.DishId))
-                                throw new RestException(HttpStatusCode.NotFound, new { DishIngredient = "Not exist" });
-                        }
+
+                        if (!await _ingredient.IsIngredientExitById(test.IngredientId, user.Id))
+                            throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
+                        //to check right combination of Ingredient and Dish
+                        if (!await _recipe.IsIdsExitInRecipeIngredient(test.IngredientId, request.DishId))
+                            throw new RestException(HttpStatusCode.NotFound, new { DishIngredient = "Not exist" });
+
                     }
                 }
 
@@ -102,7 +94,7 @@ namespace Application.Dishes
                     DishCategoryId = request.DishCategoryId,
                 };
 
-                var success = await _dishGenerator.Update(user.Id, request.DishId, updateDish);
+                var success = await _dish.Update(user.Id, request.DishId, updateDish);
                 if (!success) throw new Exception("Problem saving changes");
 
                 if (haveIngredient)
@@ -110,41 +102,24 @@ namespace Application.Dishes
                     foreach (var updateIngredient in request.UpdateIngredients)
                     {
                         var ingredientIdentityId = 0;
-                        if (updateIngredient.IsNewIngredient)
+
+                        var ingredientFromDB = await _ingredient.GetIngredient(user.Id, updateIngredient.IngredientId);
+                        if (ingredientFromDB != null)
                         {
-                            var createIngredient = new Domain.Entities.Ingredients
+                            var updateIngredent = new IngredientDto
                             {
-                                Name = updateIngredient.Name,
-                                Description = updateIngredient.Description,
-                                SlugUrl = updateIngredient.SlugUrl
+                                Name = updateIngredient.Name ?? ingredientFromDB.Name,
+                                Description = updateIngredient.Description ?? ingredientFromDB.Description
                             };
 
-                            ingredientIdentityId = await _ingredientGenerator.Create(user.Id, createIngredient);
-
-                            bool recipeIngredient = await _recipeIngredientGenerator.Create(request.DishId, ingredientIdentityId, updateIngredient.Amount);
-                            if (!recipeIngredient)
-                                throw new Exception("Problem creating dish ingredient list");
+                            ingredientIdentityId = await _ingredient.Update(user.Id, updateIngredient.IngredientId, updateIngredent);
+                            if (ingredientIdentityId <= 0) throw new Exception("Problem saving changes ingredients");
                         }
-                        else
+
+                        if (!string.IsNullOrWhiteSpace(updateIngredient.Amount))
                         {
-                            var ingredientFromDB = await _ingredientGenerator.GetIngredient(user.Id, updateIngredient.IngredientId);
-                            if (ingredientFromDB != null)
-                            {
-                                var updateIngredent = new IngredientDto
-                                {
-                                    Name = updateIngredient.Name ?? ingredientFromDB.Name,
-                                    Description = updateIngredient.Description ?? ingredientFromDB.Description
-                                };
-
-                                ingredientIdentityId = await _ingredientGenerator.Update(user.Id, updateIngredient.IngredientId, updateIngredent);
-                                if (ingredientIdentityId <= 0) throw new Exception("Problem saving changes ingredients");
-                            }
-
-                            if (!string.IsNullOrWhiteSpace(updateIngredient.Amount))
-                            {
-                                var newMeasurementResult = await _recipeIngredientGenerator.Update(request.DishId, updateIngredient.IngredientId, updateIngredient.Amount);
-                                if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new dish list");
-                            }
+                            var newMeasurementResult = await _recipe.Update(request.DishId, updateIngredient.IngredientId, updateIngredient.Amount);
+                            if (newMeasurementResult <= 0) throw new Exception("Problem saving changes with new dish list");
                         }
                     }
                 }

@@ -16,129 +16,186 @@ namespace Infrastructure.Security
     {
         private readonly IConnectionString _connection;
         public string conStr = string.Empty;
-        public UserAuth(IConnectionString connection)
+        private readonly IUserAccessor _userAccessor;
+        public UserAuth(IConnectionString connection, IUserAccessor userAccessor)
         {
+            _userAccessor = userAccessor;
             _connection = connection;
             conStr = _connection.GetConnectionString();
         }
 
+        public async Task<GoodFoodUser> GetCurrentUser()
+        {
+            var username = _userAccessor.GetCurrentUsername();
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                var user = await GetUser(username);
+                return user;
+            }
+
+            return null;
+        }
         public async Task<bool> IsUserExits(string userName)
         {
-            string commandText = "Select Count([UserName]) FROM GoodFoodUser Where UserName=@userName";
-            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
-            user_name.Value = userName;
+            try
+            {
+                string commandText = @"Select 
+                    Count([UserName]) 
+                FROM 
+                    GoodFoodUser 
+                Where 
+                    UserName=@userName";
+                SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+                user_name.Value = userName;
 
-            Object oValue = await SqlHelper.ExecuteScalarAsync(conStr, commandText, CommandType.Text, user_name);
-            Int32 count;
-            if (Int32.TryParse(oValue.ToString(), out count))
-                return count > 0 ? true : false;
+                Object oValue = await SqlHelper.ExecuteScalarAsync(conStr, commandText, CommandType.Text, user_name);
+                Int32 count;
+                if (Int32.TryParse(oValue.ToString(), out count))
+                    return count > 0 ? true : false;
 
-            return false;
+                return false;
+            }
+            catch (System.Exception)
+            {
+                throw new Exception("Error to connected with DB");
+            }
+
         }
 
         public async Task<GoodFoodUser> Register(string userName, string password)
         {
-
-            byte[] passwordHash, passwordSalt;
-            CreatePasswordHash(password, out passwordHash, out passwordSalt);
-
-            string insertCommandText = @"INSERT INTO GoodFoodUser (UserName, UserPassword, UserPasswordSalt)
-                values (@userName,@passwordHash,@passwordSalt)";
-
-            SqlParameter user_name = new SqlParameter("@userName", userName);
-            SqlParameter user_password = new SqlParameter("@passwordHash", passwordHash);
-            SqlParameter user_password_salt = new SqlParameter("@passwordSalt", passwordSalt);
-
-            Int32 rows = await SqlHelper.ExecuteNonQueryAsync(
-                conStr,
-                insertCommandText,
-                CommandType.Text,
-                user_name,
-                user_password,
-                user_password_salt);
-            if (rows >= 1)
+            try
             {
-                var user = new GoodFoodUser
-                {
-                    Username = userName
-                };
-                return user;
-            }
+                byte[] passwordHash, passwordSalt;
+                CreatePasswordHash(password, out passwordHash, out passwordSalt);
 
-            throw new Exception("Problem creating user");
+                string insertCommandText = @"INSERT 
+                INTO 
+                    GoodFoodUser (UserName, UserPassword, UserPasswordSalt)
+                VALUES 
+                    (@userName,@passwordHash,@passwordSalt)";
+
+                SqlParameter user_name = new SqlParameter("@userName", userName);
+                SqlParameter user_password = new SqlParameter("@passwordHash", passwordHash);
+                SqlParameter user_password_salt = new SqlParameter("@passwordSalt", passwordSalt);
+
+                Int32 rows = await SqlHelper.ExecuteNonQueryAsync(
+                    conStr,
+                    insertCommandText,
+                    CommandType.Text,
+                    user_name,
+                    user_password,
+                    user_password_salt);
+                if (rows >= 1)
+                {
+                    var user = new GoodFoodUser
+                    {
+                        Username = userName
+                    };
+                    return user;
+                }
+                return null;
+            }
+            catch (System.Exception)
+            {
+                throw new Exception("Problem creating user");
+            }
         }
 
         public async Task<List<GoodFoodUserDto>> GetAllUser()
         {
-            List<GoodFoodUserDto> allusers = new List<GoodFoodUserDto>();
-            string selectCommandText = @"SELECT UserName FROM GoodFoodUser";
-
-            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.Text))
+            try
             {
-                while (reader.Read())
-                {
-                    var user = new GoodFoodUserDto
-                    {
-                        UserName = reader["UserName"].ToString()
-                    };
+                List<GoodFoodUserDto> allusers = new List<GoodFoodUserDto>();
+                string selectCommandText = @"SELECT UserName FROM GoodFoodUser";
 
-                    allusers.Add(user);
+                using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                    CommandType.Text))
+                {
+                    while (reader.Read())
+                    {
+                        var user = new GoodFoodUserDto
+                        {
+                            UserName = reader["UserName"].ToString()
+                        };
+
+                        allusers.Add(user);
+                    }
+                    await reader.CloseAsync();
                 }
-                await reader.CloseAsync();
+                return allusers;
+
             }
-            return allusers;
+            catch (System.Exception)
+            {
+                throw new Exception("Problem to get users");
+            }
+
         }
 
         public async Task<GoodFoodUser> GetUser(string userName)
         {
-            var user = new GoodFoodUser();
-            bool isUserExist = false;
-            string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
-            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
-            user_name.Value = userName;
-            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.Text, user_name))
+            try
             {
-                while (reader.Read())
+                var user = new GoodFoodUser();
+                bool isUserExist = false;
+                string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
+                SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+                user_name.Value = userName;
+                using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                    CommandType.Text, user_name))
                 {
-                    isUserExist = true;
-                    user.Username = (string)reader["UserName"];
-                    user.Password = (byte[])reader["UserPassword"];
-                    user.PasswordSalt = (byte[])reader["UserPasswordSalt"];
-                    user.Id = (int)reader["UserId"];
+                    while (reader.Read())
+                    {
+                        isUserExist = true;
+                        user.Username = (string)reader["UserName"];
+                        user.Password = (byte[])reader["UserPassword"];
+                        user.PasswordSalt = (byte[])reader["UserPasswordSalt"];
+                        user.Id = (int)reader["UserId"];
+                    }
+                    await reader.CloseAsync();
                 }
-                await reader.CloseAsync();
+                return isUserExist ? user : null;
             }
-            return isUserExist ? user : null;
+            catch (System.Exception)
+            {
+                throw new Exception("Problem get user");
+            }
         }
         public async Task<GoodFoodUser> VerifyUser(string userName, string password)
         {
-            string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
-            SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
-            user_name.Value = userName;
-
-            var userFromDB = new GoodFoodUser();
-            bool isUserInDb = false;
-
-            using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
-                CommandType.Text, user_name))
+            try
             {
-                while (reader.Read())
+                string selectCommandText = @"SELECT * FROM GoodFoodUser WHERE UserName=@userName";
+                SqlParameter user_name = new SqlParameter("@userName", SqlDbType.VarChar);
+                user_name.Value = userName;
+
+                var userFromDB = new GoodFoodUser();
+                bool isUserInDb = false;
+
+                using (SqlDataReader reader = await SqlHelper.ExecuteReaderAsync(conStr, selectCommandText,
+                    CommandType.Text, user_name))
                 {
-                    isUserInDb = true;
+                    while (reader.Read())
+                    {
+                        isUserInDb = true;
 
-                    var pass = reader["UserPassword"];
-                    var salt = reader["UserPasswordSalt"];
+                        var pass = reader["UserPassword"];
+                        var salt = reader["UserPasswordSalt"];
 
-                    if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
-                        throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
+                        if (!verifyPasswordHash(password, (byte[])pass, (byte[])salt))
+                            throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
-                    userFromDB.Username = reader["UserName"].ToString();
+                        userFromDB.Username = reader["UserName"].ToString();
+                    }
+                    await reader.CloseAsync();
                 }
-                await reader.CloseAsync();
+                return isUserInDb ? userFromDB : null;
             }
-            return isUserInDb ? userFromDB : null;
+            catch (System.Exception)
+            {
+                throw new Exception("Problem get user");
+            }
         }
         private bool verifyPasswordHash(string password, byte[] user_Password_Hash, byte[] user_Password_Salt)
         {

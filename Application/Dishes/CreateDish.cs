@@ -12,7 +12,7 @@ namespace Application.Dishes
 {
     public class CreateDish
     {
-        public class Ingredients
+        public class DishIngredients
         {
             public int IngredientId { get; set; }
             public string Amount { get; set; }
@@ -23,27 +23,26 @@ namespace Application.Dishes
             public string Description { get; set; }
             public string SlugUrl { get; set; }
             public int DishCategoryId { get; set; }
-            public string Username { get; set; }
-            public List<Ingredients> Ingredients { get; set; }
+            public List<DishIngredients> Ingredients { get; set; }
         }
         public class Handler : IRequestHandler<CreateDishCommand>
         {
             private readonly IUserAuth _userAuth;
             private readonly IDishCategory _dishCategory;
-            private readonly IDishGenerator _dishGenerator;
-            private readonly IIngredientGenerator _ingredientGenerator;
-            private readonly IRecipeIngredientGenerator _recipeIngredientGenerator;
+            private readonly IDish _dish;
+            private readonly IIngredient _ingredient;
+            private readonly IRecipe _recipe;
 
             public Handler(
                 IUserAuth userAuth,
                 IDishCategory dishCategory,
-                IDishGenerator dishGenerator,
-                IIngredientGenerator ingredientGenerator,
-                IRecipeIngredientGenerator recipeIngredientGenerator)
+                IDish dish,
+                IIngredient ingredient,
+                IRecipe recipe)
             {
-                _ingredientGenerator = ingredientGenerator;
-                _recipeIngredientGenerator = recipeIngredientGenerator;
-                _dishGenerator = dishGenerator;
+                _ingredient = ingredient;
+                _recipe = recipe; ;
+                _dish = dish;
                 _userAuth = userAuth;
                 _dishCategory = dishCategory;
             }
@@ -51,7 +50,7 @@ namespace Application.Dishes
             public async Task<Unit> Handle(CreateDishCommand request,
                 CancellationToken cancellationToken)
             {
-                var user = await _userAuth.GetUser(request.Username);
+                var user = await _userAuth.GetCurrentUser();
                 if (user == null)
                     throw new RestException(HttpStatusCode.Unauthorized, new { User = "Not pass" });
 
@@ -59,10 +58,10 @@ namespace Application.Dishes
                 if (dishCategory == null)
                     throw new RestException(HttpStatusCode.NotFound, new { DishCategory = "Not found" });
 
-                if (await _dishGenerator.IsDishExitsWithSlug(user.Id, request.SlugUrl))
+                if (await _dish.IsDishExitsWithSlug(user.Id, request.SlugUrl))
                     throw new RestException(HttpStatusCode.BadRequest, new { Dish_Slug = "Already exist" });
 
-                if (await _dishGenerator.IsDishExits(request.Title, user.Id))
+                if (await _dish.IsDishExitsWithTitle(request.Title, user.Id))
                     throw new RestException(HttpStatusCode.BadRequest, new { DishTitle = "Already exist" });
 
                 bool haveIngredients = false;
@@ -71,7 +70,7 @@ namespace Application.Dishes
                     haveIngredients = true;
                     foreach (var ingredient in request.Ingredients)
                     {
-                        if (!await _ingredientGenerator.IsIngredientExitById(ingredient.IngredientId, user.Id))
+                        if (!await _ingredient.IsIngredientExitById(ingredient.IngredientId, user.Id))
                             throw new RestException(HttpStatusCode.NotFound, new { Ingredient = "Not found" });
                     }
                 }
@@ -83,13 +82,13 @@ namespace Application.Dishes
                     DishCategoryId = request.DishCategoryId,
                 };
 
-                var createdDish = await _dishGenerator.Create(user.Id, toCreateDish);
+                var createdDish = await _dish.Create(user.Id, toCreateDish);
 
                 if (haveIngredients)
                 {
                     foreach (var ingredient in request.Ingredients)
                     {
-                        bool dishIngredient = await _recipeIngredientGenerator.Create(createdDish.Id, ingredient.IngredientId, ingredient.Amount);
+                        bool dishIngredient = await _recipe.Create(createdDish.Id, ingredient.IngredientId, ingredient.Amount);
                         if (!dishIngredient)
                             throw new Exception("Problem adding Dish Ingredients");
                     }

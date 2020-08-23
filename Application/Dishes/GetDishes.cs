@@ -27,31 +27,21 @@ namespace Application.Dishes
         public class Handler : IRequestHandler<GetDishesQuery, List<Dish>>
         {
             private readonly IUserAuth _userAuth;
-            private readonly IDishGenerator _dishGenerator;
-            public Handler(IUserAuth userAuth, IDishGenerator dishGenerator)
+            private readonly IDish _dish;
+            private readonly IIngredient _ingredient;
+            public Handler(IUserAuth userAuth, IDish dish, IIngredient ingredient)
             {
-                _dishGenerator = dishGenerator;
+                _ingredient = ingredient;
+                _dish = dish;
                 _userAuth = userAuth;
             }
 
             public async Task<List<Dish>> Handle(GetDishesQuery request,
                 CancellationToken cancellationToken)
             {
-                // string selectCommandText = @"SELECT Dish.DishId, Dish.DishTitle, 
-                // Dish.Description, Dish.DishSlug, Dish.RecipeCategory,
-                // dbo.ingredients.ingredient_id, dbo.ingredients.ingredient_name, dbo.ingredients.ingredient_description, 
-                // dbo.ingredients.ingredient_slug, dbo.recipe_ingredients.amount
-                // FROM dbo.recipes
-                // JOIN dbo.recipe_ingredients ON dbo.recipes.recipe_id = dbo.recipe_ingredients.recipe_id 
-                // JOIN dbo.ingredients ON  dbo.recipe_ingredients.ingredient_id = dbo.ingredients.ingredient_id";
-
                 string selectCommandText = @"SELECT Dish.DishId, Dish.DishTitle, 
-                Dish.DishDescription, Dish.DishSlug, Dish.DishCategoryId,
-	            Ingredients.IngredientId, Ingredients.IngredientName, Ingredients.IngredientDescription, 
-	            Ingredients.IngredientSlug, Recipe.amount
-                FROM Dish
-                JOIN Recipe ON Dish.DishId = Recipe.DishId 
-                JOIN Ingredients ON  Recipe.IngredientId = Ingredients.IngredientId";
+                Dish.DishDescription, Dish.DishSlug, DishCategory.DishCategoryId, DishCategory.DishCategoryTitle
+                FROM Dish JOIN DishCategory ON Dish.DishCategoryId = DishCategory.DishCategoryId";
 
                 int userId = 0;
                 if (!string.IsNullOrEmpty(request.Username))
@@ -59,19 +49,33 @@ namespace Application.Dishes
                     var user = await _userAuth.GetUser(request.Username);
                     if (user == null)
                         throw new RestException(HttpStatusCode.NotFound, new { User = "Not found" });
+
                     userId = user.Id;
-                    string.Concat(selectCommandText, "WHERE Dish.UserId = @userId");
+                    selectCommandText += @" WHERE Dish.UserId = @userId";
                 }
 
-                string.Concat(selectCommandText, "ORDER BY Dish.DishId");
+                selectCommandText += @" ORDER BY Dish.DishId
+                OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
-                var dishesFromDB = await _dishGenerator.GetDishes(userId, selectCommandText);
 
-                var dishes = dishesFromDB != null
-                    ? dishesFromDB.Skip(request.Offset ?? 0)
-                    .Take(request.Limit ?? 5).ToList() : null;
 
-                return dishes;
+                var dishesFromDB = await _dish.GetDishes(userId, selectCommandText, request.Offset, request.Limit);
+                if (dishesFromDB.Count > 0)
+                {
+                    selectCommandText = @"SELECT Ingredients.IngredientId, Ingredients.IngredientName, Ingredients.IngredientDescription, 
+                    Ingredients.IngredientSlug, Recipe.Amount
+                    FROM Recipe
+                    JOIN Ingredients ON Recipe.IngredientId = Ingredients.IngredientId
+                    WHERE Recipe.DishId = @dishId";
+
+                    foreach (var dish in dishesFromDB)
+                    {
+                        dish.Ingredients = await _ingredient.GetIngredientsByDishId(dish.Id, selectCommandText);
+                    }
+                }
+
+
+                return dishesFromDB;
             }
         }
     }
