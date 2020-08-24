@@ -4,6 +4,10 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <UserSecretsId>1953810a-c3e0-46b0-9858-35c740eb7fcd</UserSecretsId>
+    <Authors>Rajpal Singh</Authors>
+    <Company>SolutionsappEU</Company>
+    <RepositoryUrl>https://github.com/iamrajpal/goodfood</RepositoryUrl>
+    <RepositoryType>Public</RepositoryType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>API.xml</DocumentationFile>

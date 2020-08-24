@@ -24,7 +24,7 @@ namespace API.Extensions
                     {
                         Name = "Rajpal Singh Bains",
                         Email = "rajpalbains82@gmail.com",
-                        Url = new Uri("https://cricketeu.com/"),
+                        Url = new Uri("https://www.solutionsappeu.com/"),
                     }
                 });
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
