@@ -13,6 +13,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System;
+using FluentValidation.AspNetCore;
+using API.Extensions;
 
 namespace API
 {
@@ -28,6 +30,7 @@ namespace API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
             services.AddCors(opt =>
             {
                 opt.AddPolicy("CorsPolicy", policy =>
@@ -36,9 +39,18 @@ namespace API
                     .WithOrigins("http://localhost:3000", "http://localhost:5000").AllowCredentials();
                 });
             });
+
+            
+            services.AddSwaggerExtension();
+            services.AddApiVersioningExtension();
+
             services.AddMediatR(typeof(GetAllUser.Handler).Assembly);
 
-            services.AddControllers();
+            services.AddControllers()
+                .AddFluentValidation(cfg =>
+                {
+                    cfg.RegisterValidatorsFromAssemblyContaining<Application.DishCategories.CreateDishCategory>();
+                });
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["TokenKey"]));
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -52,16 +64,34 @@ namespace API
                         ValidateIssuer = false,
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.Zero
-                    };                    
+                    };
                 });
 
-          
+
+
             services.AddScoped<IJwtGenerator, JwtGenerator>();
-            services.AddScoped<IConnectionString, GetDBConnectionString>();
+            services.AddSingleton<IConnectionString, GetDBConnectionString>();
             services.AddScoped<IUserAuth, UserAuth>();
-            services.AddScoped<IRecipeGenerator, RecipeGenerator>();
-            services.AddScoped<IIngredientGenerator, IngredientGenerator>();
-            services.AddScoped<IRecipeIngredientGenerator, RecipeIngredientGenerator>();
+            services.AddScoped<IDishCategory, DishCategoryRepo>();
+            services.AddScoped<IDish, DishRepo>();
+            services.AddScoped<IIngredient, IngredientRepo>();
+            services.AddScoped<IRecipe, RecipeRepo>();
+            services.AddScoped<IUserAccessor, UserAccessor>();
+
+            string conStr = Configuration.GetConnectionString("DefaultConnection");
+            GenerateDB(conStr);
+        }
+
+        private void GenerateDB(string conStr)
+        {
+            try
+            {
+                CreateDB.CreateAndSeedData(conStr).Wait();
+            }
+            catch (System.Exception)
+            {
+                throw;
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -79,6 +109,7 @@ namespace API
             app.UseCors("CorsPolicy");
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseSwaggerExtension();
 
             app.UseEndpoints(endpoints =>
             {

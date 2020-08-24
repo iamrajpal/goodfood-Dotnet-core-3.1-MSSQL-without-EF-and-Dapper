@@ -31,6 +31,9 @@ namespace Application.GoodFoodUsers
                 if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
                     throw new RestException(HttpStatusCode.BadRequest, new { User_Password = "Required" });
 
+                if (await _userAuth.IsUserExits(request.Username))
+                    throw new RestException(HttpStatusCode.BadRequest, new { Username = "Already exist" });
+
                 var userFromDB = await _userAuth.Register(request.Username, request.Password);
 
                 if (userFromDB == null)
@@ -38,7 +41,7 @@ namespace Application.GoodFoodUsers
 
                 var user = new GoodFoodUserDto
                 {
-                    Username = userFromDB.Username,
+                    UserName = userFromDB.Username,
                     Token = _jwtGenerator.CreateToken(userFromDB)
                 };
 

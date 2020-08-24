@@ -4,6 +4,14 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <UserSecretsId>1953810a-c3e0-46b0-9858-35c740eb7fcd</UserSecretsId>
+    <Authors>Rajpal Singh</Authors>
+    <Company>SolutionsappEU</Company>
+    <RepositoryUrl>https://github.com/iamrajpal/goodfood</RepositoryUrl>
+    <RepositoryType>Public</RepositoryType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>API.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Application\Application.csproj"/>
@@ -11,5 +19,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.6"/>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1"/>
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="5.5.1"/>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="4.1.1"/>
   </ItemGroup>
 </Project>
